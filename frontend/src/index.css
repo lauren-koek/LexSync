@@ -1,0 +1,132 @@
+@import 'tailwindcss';
+
+/* ------------------------------------------------------------------ *
+ * LexSync editorial design system
+ * Tokens ported from sample_frontend/index.BYl0jkVs.css
+ * ------------------------------------------------------------------ */
+
+@theme {
+  --font-sans: 'Geist Variable', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius: 0.65rem;
+  --radius-lg: 0.65rem;
+
+  /* surfaces */
+  --color-canvas: #fafaf9;
+  --color-card: #ffffff;
+  --color-panel: #f2f2ef;
+  --color-border: #d4d3cd;
+  --color-border-strong: #c9cac2;
+
+  /* ink */
+  --color-ink: #242822;
+  --color-ink-soft: #454842;
+  --color-muted: #747671;
+
+  /* sage / olive accents */
+  --color-accent: #607051;
+  --color-accent-deep: #536749;
+  --color-accent-ink: #3a4933;
+  --color-ring: #6a795f;
+
+  /* decision semantics */
+  --color-decision-red: #7b302b;
+  --color-decision-red-bg: #f6ecea;
+  --color-decision-amber: #946e5d;
+  --color-decision-amber-bg: #f1e9e5;
+  --color-decision-green: #607051;
+  --color-decision-green-bg: #e7ece3;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.01em;
+    font-weight: 600;
+  }
+
+  a {
+    color: var(--color-accent-deep);
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+
+  :where(button, input, textarea, select):focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 1px;
+  }
+}
+
+@layer components {
+  .eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .mono {
+    font-family: var(--font-mono);
+  }
+
+  /* decision pills */
+  .decision-red {
+    color: var(--color-decision-red);
+    background: var(--color-decision-red-bg);
+  }
+  .decision-amber {
+    color: var(--color-decision-amber);
+    background: var(--color-decision-amber-bg);
+  }
+  .decision-green {
+    color: var(--color-decision-green);
+    background: var(--color-decision-green-bg);
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid var(--color-border-strong);
+    border-top-color: var(--color-accent);
+    border-radius: 9999px;
+    animation: spin 0.8s linear infinite;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* thin editorial scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}

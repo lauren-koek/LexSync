@@ -1,69 +1,64 @@
-import { useEffect, useState } from 'react'
-import { fetchDocuments, fetchUpdates } from '../api.js'
+import { useState } from 'react'
 import DetailPanel from './DetailPanel.jsx'
 import DocumentList from './DocumentList.jsx'
+import SummaryStrip from './SummaryStrip.jsx'
 import TopBar from './TopBar.jsx'
 
-export default function UpdatesView() {
-  const [days, setDays] = useState(7)
-  const [docs, setDocs] = useState([])
-  const [selected, setSelected] = useState(null)
-  const [initialLoading, setInitialLoading] = useState(true)
-  const [initialError, setInitialError] = useState(null)
-  const [scrapeLoading, setScrapeLoading] = useState(false)
-  const [scrapeError, setScrapeError] = useState(null)
-  const [resultSource, setResultSource] = useState('saved')
+// Dashboard body. Consumes the shared document dataset via the `documents`
+// hook object owned by App, and manages its own local selection.
+export default function UpdatesView({ documents }) {
+  const {
+    days,
+    setDays,
+    docs,
+    initialLoading,
+    initialError,
+    scrapeLoading,
+    scrapeError,
+    resultSource,
+    runFetch,
+  } = documents
 
-  useEffect(() => {
-    let active = true
-    fetchDocuments()
-      .then(results => {
-        if (!active) return
-        setDocs(results)
-        setSelected(results[0] || null)
-      })
-      .catch(err => active && setInitialError(err.message))
-      .finally(() => {
-        if (active) {
-          setInitialLoading(false)
-        }
-      })
-    return () => { active = false }
-  }, [])
+  const [selectedUrl, setSelectedUrl] = useState(null)
+  const selected =
+    docs.find(d => d.source_url === selectedUrl) || docs[0] || null
 
-  async function handleFetch() {
-    setScrapeLoading(true)
-    setScrapeError(null)
-    try {
-      const results = await fetchUpdates(days)
-      setDocs(results)
-      setSelected(results[0] || null)
-      setResultSource('scrape')
-    } catch (err) {
-      setScrapeError(err.message)
-    } finally {
-      setScrapeLoading(false)
-    }
-  }
+  const handleFetch = () => runFetch().catch(() => {})
+  const handleRefresh = () => runFetch({ refresh: true }).catch(() => {})
 
   return (
-    <section className="updates-view">
-      <TopBar days={days} onDaysChange={setDays} onFetch={handleFetch} loading={initialLoading || scrapeLoading} />
-      {scrapeError && docs.length > 0 && <div className="updates-error" role="alert">{scrapeError}</div>}
-      <div className="main">
+    <div className="flex h-full flex-col gap-4">
+      <SummaryStrip docs={docs} days={days} />
+      <TopBar
+        days={days}
+        onDaysChange={setDays}
+        onFetch={handleFetch}
+        onRefresh={handleRefresh}
+        loading={initialLoading || scrapeLoading}
+      />
+      {scrapeError && docs.length > 0 && (
+        <div className="decision-red rounded-lg px-4 py-2 text-sm" role="alert">
+          {scrapeError}
+        </div>
+      )}
+      <div className="flex min-h-0 flex-1 gap-4">
         <DocumentList
-          docs={docs} selected={selected} onSelect={setSelected}
+          docs={docs}
+          selected={selected}
+          onSelect={d => setSelectedUrl(d.source_url)}
           loading={initialLoading || (scrapeLoading && docs.length === 0)}
           error={initialError || scrapeError}
           fetched={!initialLoading}
           days={days}
           loadingMessage={initialLoading ? 'Loading saved documents…' : undefined}
-          emptyMessage={resultSource === 'saved'
-            ? 'No saved regulatory documents yet.'
-            : `No MAS documents found in the last ${days} days.`}
+          emptyMessage={
+            resultSource === 'saved'
+              ? 'No saved regulatory documents yet.'
+              : `No MAS documents found in the last ${days} days.`
+          }
         />
         <DetailPanel doc={selected} />
       </div>
-    </section>
+    </div>
   )
 }

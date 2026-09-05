@@ -100,6 +100,23 @@ body {
 .fetch-btn:hover:not(:disabled) { background: #0077ed; }
 .fetch-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+.refresh-btn {
+  padding: 7px 14px;
+  background: transparent;
+  color: #0071e3;
+  border: 1px solid #0071e3;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.refresh-btn:hover:not(:disabled) { background: rgba(0, 113, 227, 0.08); }
+.refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.issued-pursuant-to a { color: #0071e3; text-decoration: none; }
+.issued-pursuant-to a:hover { text-decoration: underline; }
+
 /* Main layout */
 .main {
   display: flex;
