@@ -25,6 +25,7 @@ def test_updates_returns_document_list(monkeypatch):
         "id": "abc-123",
         "title": "MAS Circular FAS 11/2026",
         "date": "2026-09-03",
+        "effective_date": "2026-07-01",
         "doc_type": "Circular",
         "topic": "AML",
         "tags": ["Financial Services"],
@@ -35,7 +36,7 @@ def test_updates_returns_document_list(monkeypatch):
         "llm_categories": ["Financial Services"],
         "llm_impact_check": "Review internal procedures.",
     }
-    monkeypatch.setattr(routes, "fetch_updates", lambda days: [mock_doc])
+    monkeypatch.setattr(routes, "fetch_updates", lambda days, refresh=False: [mock_doc])
 
     response = client.post("/api/v1/updates", json={"days": 7})
 
@@ -47,7 +48,7 @@ def test_updates_returns_document_list(monkeypatch):
 
 
 def test_updates_returns_empty_list_when_no_docs(monkeypatch):
-    monkeypatch.setattr(routes, "fetch_updates", lambda days: [])
+    monkeypatch.setattr(routes, "fetch_updates", lambda days, refresh=False: [])
 
     response = client.post("/api/v1/updates", json={"days": 7})
 
@@ -60,10 +61,13 @@ def test_documents_returns_saved_database_documents(monkeypatch):
         "id": "abc-123",
         "title": "Saved circular",
         "date": "2026-09-03",
+        "effective_date": "2026-07-01",
         "doc_type": "Circular",
         "topic": "AML",
         "tags": [],
         "applies_to": [],
+        "issued_pursuant_to_text": None,
+        "issued_pursuant_to": [],
         "source_url": "https://mas.gov.sg/saved",
         "pdf_url": None,
         "llm_summary": "Already processed.",

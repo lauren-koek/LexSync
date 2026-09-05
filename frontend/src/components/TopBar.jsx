@@ -1,23 +1,47 @@
-export default function TopBar({ days, onDaysChange, onFetch, loading }) {
+import { RefreshCw, Search } from 'lucide-react'
+import Button from './ui/Button.jsx'
+
+export default function TopBar({ days, onDaysChange, onFetch, onRefresh, loading }) {
   return (
-    <header className="topbar">
-      <span className="updates-label">MAS regulatory feed</span>
-      <label>
-        Last
-        <input
-          type="number"
-          min="1"
-          max="365"
-          value={days}
-          onChange={e => onDaysChange(Number(e.target.value))}
+    <header className="feed-toolbar workspace-panel">
+      <div>
+        <span className="eyebrow">Update controls</span>
+        <p className="mt-0.5 text-[12px] leading-snug text-muted">
+          Fetch new publications or quietly refresh saved metadata.
+        </p>
+      </div>
+      <div className="ml-auto flex flex-wrap items-end gap-3">
+        <label className="flex items-center gap-2 text-[13px] text-ink-soft">
+          Last
+          <input
+            type="number"
+            min="1"
+            max="365"
+            value={days}
+            onChange={e => onDaysChange(Number(e.target.value))}
+            disabled={loading}
+            className="h-8 w-16 rounded-lg border border-border bg-white px-2 text-center text-sm tabular-nums disabled:opacity-50"
+          />
+          days
+        </label>
+        <Button
+          onClick={onFetch}
           disabled={loading}
-        />
-        days
-      </label>
-      <button className="fetch-btn" onClick={onFetch} disabled={loading}>
-        {loading && <span className="spinner" />}
-        {loading ? 'Fetching…' : 'Fetch Latest Updates'}
-      </button>
+          title="Scrape MAS and process any new documents (existing ones are served from cache)"
+        >
+          {loading ? <span className="spinner" /> : <Search size={15} />}
+          {loading ? 'Fetching…' : 'Fetch new'}
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={onRefresh}
+          disabled={loading}
+          title="Re-pull scraped fields for documents already saved; keeps cached OCR and AI output"
+        >
+          <RefreshCw size={15} />
+          Re-sync metadata
+        </Button>
+      </div>
     </header>
   )
 }

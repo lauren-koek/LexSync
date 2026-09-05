@@ -26,6 +26,9 @@ test('loads saved documents when the application opens', async () => {
 
   render(<App />)
 
+  expect(screen.getByRole('button', { name: 'Open navigation' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
+
   expect((await screen.findAllByText('Saved MAS circular')).length).toBeGreaterThan(0)
   expect(globalThis.fetch).toHaveBeenCalledWith('/api/v1/documents')
 })
@@ -46,7 +49,7 @@ test('switches views without discarding loaded update state', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Resilience Analysis' }))
   expect(screen.getByRole('heading', { name: 'Resilience Analysis' })).toBeInTheDocument()
 
-  fireEvent.click(screen.getByRole('button', { name: 'Regulatory Updates' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Dashboard' }))
   await waitFor(() => expect(screen.getAllByText('Persistent circular').length).toBeGreaterThan(0))
   expect(globalThis.fetch).toHaveBeenCalledTimes(1)
 })
@@ -70,7 +73,7 @@ test('shows saved-document states separately and retains documents when scraping
   })
   await screen.findAllByText('Still visible')
 
-  fireEvent.click(screen.getByRole('button', { name: 'Fetch Latest Updates' }))
+  fireEvent.click(screen.getByRole('button', { name: /Fetch/i }))
 
   expect(await screen.findByRole('alert')).toHaveTextContent('MAS unavailable')
   expect(screen.getAllByText('Still visible').length).toBeGreaterThan(0)
@@ -89,7 +92,7 @@ test('disables fresh scraping until saved documents finish loading', () => {
 
   render(<App />)
 
-  expect(screen.getByRole('button', { name: 'Fetch Latest Updates' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /Fetch/i })).toBeDisabled()
   expect(globalThis.fetch).toHaveBeenCalledTimes(1)
 })
 
@@ -100,7 +103,7 @@ test('shows a lookback-specific empty state after a successful scrape', async ()
   render(<App />)
   await screen.findByText('No saved regulatory documents yet.')
 
-  fireEvent.click(screen.getByRole('button', { name: 'Fetch Latest Updates' }))
+  fireEvent.click(screen.getByRole('button', { name: /Fetch/i }))
 
   expect(await screen.findByText('No MAS documents found in the last 7 days.')).toBeInTheDocument()
 })

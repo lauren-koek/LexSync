@@ -59,7 +59,17 @@ def _normalise_doc(doc: dict) -> dict:
     return doc
 
 
-def fetch_updates(days: int, json_path: Path = _DEFAULT_JSON) -> list[dict]:
+def fetch_updates(
+    days: int, json_path: Path = _DEFAULT_JSON, refresh: bool = False
+) -> list[dict]:
+    """Re-scrape MAS and return the matching documents.
+
+    By default, documents already saved with an LLM summary are served from the
+    database and their expensive OCR/LLM steps are skipped. When ``refresh`` is
+    True, those documents' scraped metadata (including ``issued_pursuant_to``,
+    tags, and ``applies_to``) is re-pulled and overwritten, while the cached
+    OCR text and LLM output are preserved (no re-processing).
+    """
     _run_scraper(days, json_path)
 
     try:
@@ -76,30 +86,36 @@ def fetch_updates(days: int, json_path: Path = _DEFAULT_JSON) -> list[dict]:
     for doc in docs:
         url = doc.get("url", "")
 
+        already_processed = False
         cached: dict | None = None
         with get_session() as session:
             existing = session.query(Document).filter_by(source_url=url).first()
             if existing and existing.llm_summary:
+                already_processed = True
                 cached = _doc_to_dict(existing)
 
-        if cached:
+        # Serve from cache unless the caller explicitly asked to refresh.
+        if already_processed and not refresh:
             results.append(cached)
             continue
 
+        # For a refresh of an already-processed doc, re-upsert scraped metadata
+        # only — leave OCR/LLM as None so the existing cached values are kept.
         ocr_text: str | None = None
-        pdf_url = doc.get("pdf_link")
-        if pdf_url:
-            try:
-                ocr_text = download_and_ocr(pdf_url, _DEFAULT_PDF_DIR, _DEFAULT_OCR_DIR)
-            except Exception:
-                logger.warning("OCR failed for %s", url, exc_info=True)
-
         processed = None
-        if ocr_text:
-            try:
-                processed = process_document(doc, ocr_text)
-            except Exception:
-                logger.warning("LLM processing failed for %s", url, exc_info=True)
+        if not already_processed:
+            pdf_url = doc.get("pdf_link")
+            if pdf_url:
+                try:
+                    ocr_text = download_and_ocr(pdf_url, _DEFAULT_PDF_DIR, _DEFAULT_OCR_DIR)
+                except Exception:
+                    logger.warning("OCR failed for %s", url, exc_info=True)
+
+            if ocr_text:
+                try:
+                    processed = process_document(doc, ocr_text)
+                except Exception:
+                    logger.warning("LLM processing failed for %s", url, exc_info=True)
 
         with get_session() as session:
             _upsert_document(session, doc, ocr_text, processed)
@@ -135,10 +151,13 @@ def _doc_to_dict(doc: Document) -> dict:
         "id": str(doc.id),
         "title": doc.title,
         "date": doc.date.isoformat() if doc.date else None,
+        "effective_date": doc.effective_date.isoformat() if doc.effective_date else None,
         "doc_type": doc.doc_type,
         "topic": doc.topic,
         "tags": doc.tags or [],
         "applies_to": doc.applies_to or [],
+        "issued_pursuant_to_text": doc.issued_pursuant_to_text,
+        "issued_pursuant_to": doc.issued_pursuant_to or [],
         "source_url": doc.source_url,
         "pdf_url": doc.pdf_url,
         "llm_summary": doc.llm_summary,

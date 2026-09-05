@@ -16,11 +16,11 @@ export async function fetchDocuments() {
   return readJson(await fetch('/api/v1/documents'))
 }
 
-export async function fetchUpdates(days) {
+export async function fetchUpdates(days, { refresh = false } = {}) {
   const res = await fetch('/api/v1/updates', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ days }),
+    body: JSON.stringify({ days, refresh }),
   })
   return readJson(res)
 }

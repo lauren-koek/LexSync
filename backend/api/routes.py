@@ -48,7 +48,7 @@ def analysis_upload(
 
 @router.post("/updates", response_model=list[DocumentResponse])
 def updates(request: UpdatesRequest) -> list[dict]:
-    return fetch_updates(request.days)
+    return fetch_updates(request.days, refresh=request.refresh)
 
 
 @router.get("/documents", response_model=list[DocumentResponse])

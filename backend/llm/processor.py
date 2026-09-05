@@ -52,7 +52,7 @@ def process_document(doc: dict, ocr_text: str) -> ProcessedDoc:
         "Respond with a JSON object containing exactly three fields:\n"
         '  "summary": string, 80-150 words, objective voice\n'
         f'  "categories": array of strings, each must be one of: {json.dumps(STANDARD_TAGS)}\n'
-        '  "impact_check": string, the IMPACT CHECK block\n\n'
+        '  "impact_check": string, impact-check content only; omit the heading and effective date\n\n'
         "Return only the JSON object, no markdown fences or additional text."
     )
 

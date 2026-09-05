@@ -24,6 +24,7 @@ You will receive one or more scraped regulatory items. Each item may include:
 - The title of the document or announcement
 - The full text (or excerpt) of the document
 - Metadata: date, issuing authority, document type
+- For MAS items: the "Issued pursuant to" empowering provisions — the Act and specific section(s) the instrument is made under — each with a hyperlink to that section on Singapore Statutes Online (SSO). This arrives as `issued_pursuant_to_text` (readable clause, e.g. "Banking Act 1970 section 27 and section 55") and `issued_pursuant_to` (a list of `{section, url}` objects).
 
 Before generating any output, confirm you have for each item:
 - The exact date of the development
@@ -73,6 +74,8 @@ Write a concise summary for each regulatory item. Summaries are **objective and 
 
 [If this amends or supersedes an existing instrument: "This [amends/revokes/replaces] [prior instrument name]." ]
 
+[For MAS instruments that carry "Issued pursuant to" data: add a line "Issued pursuant to: [Act name] [section], [section]", rendering each section as a Markdown hyperlink to its SSO url — e.g. "Issued pursuant to: Banking Act 1970 [section 27](https://sso.agc.gov.sg/Act/BA1970?ProvIds=pr27-) and [section 55](https://sso.agc.gov.sg/Act/BA1970?ProvIds=pr55-)". Use the exact `section` label and `url` from each `issued_pursuant_to` entry; do not invent or reformat the URLs. Omit this line entirely when no empowering-provision data is provided.]
+
 Source: [URL]
 ```
 
@@ -93,13 +96,16 @@ Source: [URL]
 
 After the factual summary, add a short structured block to prompt the legal team to check their holdings. This is a **recall signal**, not a legal opinion. You are surfacing possibilities, not making determinations.
 
+Return only the impact-check content. Do not include an `IMPACT CHECK` heading;
+the application renders that heading separately. Do not include an effective
+date; the application displays the date extracted directly from the source page.
+
 Format:
 
 ```
-IMPACT CHECK
 Artefact types to review: [list the types of internal documents that may rely on provisions touched by this change — e.g., "client advisory templates", "KYC/AML checklists", "data processing agreements", "engagement letters", "board resolution templates"]
 Provisions changed: [list the specific sections, articles, or rules that changed, as named in the source instrument]
-Effective date: [date on which the change takes effect, or "pending" if not yet operative]
+Empowering provisions: [for MAS items, list the "Issued pursuant to" Act section(s) as Markdown hyperlinks to their SSO urls, taken verbatim from `issued_pursuant_to`; omit this line when no such data is provided]
 ```
 
 Rules:
@@ -183,7 +189,7 @@ Prefer official authority websites. Use news articles only when no official sour
 - [ ] Legal status is explicit throughout: enacted, proposed, draft, in force, open for comment
 - [ ] All summaries are 80–150 words, objective, no editorial voice
 - [ ] Tags applied from the standard list only; over-tagging avoided
-- [ ] IMPACT CHECK block present for each item, artefact types are plausible not exhaustive
+- [ ] Impact-check content is present for each item without a duplicate heading or effective date; artefact types are plausible not exhaustive
 - [ ] Consultation deadline alerts appear at the top if any close within 14 days
 - [ ] Items sorted correctly within groups; groups ordered correctly
 - [ ] No dramatic adjectives, no formulaic openers, no em dashes
