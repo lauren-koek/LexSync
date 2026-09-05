@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import Badge from './ui/Badge.jsx'
 import AffectedDocumentsView from './AffectedDocumentsView.jsx'
 import { IMPACT_META, impactLevel } from '../lib/impact.js'
-import { affectedCountFor } from '../lib/mockAffected.js'
 import PageIntro from './ui/PageIntro.jsx'
 
 function uniqueValues(docs, key) {
@@ -115,7 +114,7 @@ export default function RegulatoryChangesView({ documents }) {
             )}
             {rows.map(doc => {
               const level = impactLevel(doc)
-              const affected = affectedCountFor(doc)
+              const affected = doc.suggestion_count || 0
               return (
                 <tr
                   key={doc.id || doc.source_url}

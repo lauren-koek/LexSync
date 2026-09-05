@@ -1,10 +1,11 @@
-import { LayoutDashboard, ListTree, Network, ShieldCheck } from 'lucide-react'
+import { Files, LayoutDashboard, ListTree, Network, ShieldCheck } from 'lucide-react'
 import logo from '../assets/lexsync-logo.jpg'
 import { cn } from '../lib/utils.js'
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'changes', label: 'Regulatory Changes', icon: ListTree },
+  { id: 'documents', label: 'Internal Documents', icon: Files },
   { id: 'map', label: 'Impact Map', icon: Network },
   { id: 'analysis', label: 'Resilience Analysis', icon: ShieldCheck },
 ]

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import RegulatoryChangesView from './RegulatoryChangesView.jsx'
 
 const docs = [
@@ -48,4 +48,17 @@ test('opens the affected-documents page from an explicit impact action', () => {
     screen.getByRole('button', { name: /Back to regulatory changes/i }),
   ).toBeInTheDocument()
   expect(screen.getByText('Regulatory change')).toBeInTheDocument()
+})
+
+test('renders persisted suggestions for an opened regulatory document', async () => {
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true, json: async () => [{
+    id: 's-1', regulation_clause_reference: 'Section 12A', similarity_score: 0.92,
+    impact_score: 8, legal_reasoning: 'Persisted retention conflict.',
+    redline_diff: '[-three years-] {+seven years+}', statutory_citations: ['Section 12A'],
+    status: 'pending',
+  }] })
+  render(<RegulatoryChangesView documents={view()} />)
+  fireEvent.click(screen.getAllByRole('button', { name: /View impact for AML Circular/i })[0])
+
+  expect(await screen.findByText('Persisted retention conflict.')).toBeInTheDocument()
 })

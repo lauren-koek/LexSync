@@ -1,6 +1,26 @@
-import { expect, test, vi } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 
-import { runAnalysis } from './api.js'
+import { runAnalysis, uploadInternalDocument } from './api.js'
+
+afterEach(() => vi.restoreAllMocks())
+
+test('uploads an internal PDF as multipart data', async () => {
+  const file = new File(['pdf'], 'policy.pdf', { type: 'application/pdf' })
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+    ok: true,
+    status: 201,
+    json: async () => ({ id: 'doc-1' }),
+  })
+
+  await uploadInternalDocument(file, 'Policy')
+
+  const [url, options] = fetchMock.mock.calls[0]
+  expect(url).toBe('/api/v1/internal-documents')
+  expect(options.method).toBe('POST')
+  expect(options.headers).toBeUndefined()
+  expect(options.body.get('file')).toBe(file)
+  expect(options.body.get('title')).toBe('Policy')
+})
 
 test('runAnalysis sends text and uploaded files as multipart data', async () => {
   const regulationFile = new File(['reg'], 'regulation.txt')

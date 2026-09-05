@@ -5,11 +5,13 @@ import UpdatesView from './components/UpdatesView.jsx'
 import RegulatoryChangesView from './components/RegulatoryChangesView.jsx'
 import ImpactMapView from './components/ImpactMapView.jsx'
 import AnalysisView from './components/AnalysisView.jsx'
+import InternalDocumentsView from './components/InternalDocumentsView.jsx'
 import useDocuments from './hooks/useDocuments.js'
 
 const TITLES = {
   dashboard: 'Dashboard',
   changes: 'Regulatory Changes',
+  documents: 'Internal Documents',
   map: 'Impact Map',
   analysis: 'Resilience Analysis',
 }
@@ -34,6 +36,7 @@ export default function App() {
         <main className="app-content">
           {view === 'dashboard' && <UpdatesView documents={documents} />}
           {view === 'changes' && <RegulatoryChangesView documents={documents} />}
+          {view === 'documents' && <InternalDocumentsView />}
           {view === 'map' && <ImpactMapView />}
           {view === 'analysis' && <AnalysisView />}
         </main>

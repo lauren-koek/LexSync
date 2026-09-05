@@ -16,6 +16,55 @@ export async function fetchDocuments() {
   return readJson(await fetch('/api/v1/documents'))
 }
 
+export async function fetchInternalDocuments(query = '') {
+  const suffix = query ? `?q=${encodeURIComponent(query)}` : ''
+  return readJson(await fetch(`/api/v1/internal-documents${suffix}`))
+}
+
+export async function uploadInternalDocument(file, title = '') {
+  const body = new FormData()
+  body.append('file', file)
+  if (title.trim()) body.append('title', title.trim())
+  return readJson(await fetch('/api/v1/internal-documents', { method: 'POST', body }))
+}
+
+export async function searchInternalDocuments(query, limit = 10) {
+  return readJson(await fetch('/api/v1/internal-documents/search', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, limit }),
+  }))
+}
+
+export async function fetchInternalDocument(id) {
+  return readJson(await fetch(`/api/v1/internal-documents/${id}`))
+}
+
+export async function fetchInternalDocumentPdfUrl(id) {
+  return readJson(await fetch(`/api/v1/internal-documents/${id}/pdf-url`))
+}
+
+export async function deleteInternalDocument(id) {
+  const response = await fetch(`/api/v1/internal-documents/${id}`, { method: 'DELETE' })
+  if (!response.ok) return readJson(response)
+}
+
+export async function reanalyzeInternalDocument(id) {
+  return readJson(await fetch(`/api/v1/internal-documents/${id}/reanalyze`, { method: 'POST' }))
+}
+
+export async function fetchRegulatorySuggestions(id) {
+  return readJson(await fetch(`/api/v1/documents/${id}/suggestions`))
+}
+
+export async function updateSuggestionStatus(id, status) {
+  return readJson(await fetch(`/api/v1/document-suggestions/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  }))
+}
+
 export async function fetchUpdates(days, { refresh = false } = {}) {
   const res = await fetch('/api/v1/updates', {
     method: 'POST',

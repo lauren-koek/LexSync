@@ -213,6 +213,11 @@
     min-height: 100%;
     flex-direction: column;
   }
+  .internal-detail-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(22rem, 0.9fr);
+    gap: 1rem;
+  }
   .dashboard-view {
     display: flex;
     min-height: 100%;
@@ -637,6 +642,10 @@
 }
 
 @media (max-width: 767px) {
+  .internal-detail-grid {
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
   .page-intro__row {
     flex-direction: column;
   }
