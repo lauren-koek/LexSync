@@ -17,3 +17,5 @@ scraper/output/ocr/*
 backend/scraper/output/*.json
 backend/scraper/output/pdfs/*
 backend/scraper/output/ocr/*
+frontend/node_modules/
+frontend/dist/
