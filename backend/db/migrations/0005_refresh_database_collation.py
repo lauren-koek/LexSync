@@ -9,6 +9,10 @@ from backend.db.session import engine
 
 logger = logging.getLogger(__name__)
 
+# A full-database REINDEX can outlast the platform healthcheck window, so this
+# migration runs off the request-serving startup path (see migrations.runner).
+BACKGROUND = True
+
 VERSION_QUERY = """
 SELECT datname, datcollversion, pg_database_collation_actual_version(oid)
 FROM pg_database

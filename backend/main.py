@@ -1,4 +1,6 @@
+import logging
 import os
+import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -7,7 +9,9 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.api.routes import app
 from backend.db import create_tables
-from backend.db.migrations.runner import run_migrations
+from backend.db.migrations.runner import run_background_migrations, run_migrations
+
+logger = logging.getLogger(__name__)
 
 
 def prepare_database() -> None:
@@ -15,9 +19,23 @@ def prepare_database() -> None:
     run_migrations()
 
 
+def _run_background_maintenance() -> None:
+    try:
+        run_background_migrations()
+    except Exception:
+        # Maintenance (e.g. collation reindex) must never take the app down; it
+        # retries on the next startup. Failing here would only crash a worker.
+        logger.exception("Background database maintenance failed")
+
+
 @asynccontextmanager
 async def lifespan(_app):
     prepare_database()
+    # Slow maintenance runs off-thread so the healthcheck endpoint is reachable
+    # immediately instead of waiting for a full-database reindex to finish.
+    threading.Thread(
+        target=_run_background_maintenance, name="db-maintenance", daemon=True
+    ).start()
     yield
 
 
