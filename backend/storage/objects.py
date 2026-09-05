@@ -18,6 +18,7 @@ class StorageConfigurationError(ObjectStorageError):
 class ObjectStorage(Protocol):
     def put(self, key: str, content: bytes, content_type: str) -> None: ...
     def get(self, key: str) -> bytes: ...
+    def exists(self, key: str) -> bool: ...
     def delete(self, key: str) -> None: ...
     def presigned_get_url(self, key: str, expires_seconds: int = 900) -> str: ...
 
@@ -72,6 +73,17 @@ class S3ObjectStorage:
             return response["Body"].read()
         except Exception as exc:
             raise ObjectStorageError("Unable to retrieve the stored PDF") from exc
+
+    def exists(self, key: str) -> bool:
+        try:
+            self._client.head_object(Bucket=self.bucket, Key=key)
+            return True
+        except Exception as exc:
+            response = getattr(exc, "response", {})
+            code = response.get("Error", {}).get("Code")
+            if code in {"NoSuchKey", "404", "NotFound"}:
+                return False
+            raise ObjectStorageError("Unable to check the stored PDF") from exc
 
     def delete(self, key: str) -> None:
         try:

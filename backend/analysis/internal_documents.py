@@ -149,11 +149,12 @@ def restore_missing_chunks(
 
 
 def delete_internal_document(
-    document_id: UUID, storage: ObjectStorage, session: Session
-) -> None:
+    document_id: UUID, session: Session
+) -> str:
     document = session.get(InternalDocument, document_id)
     if document is None:
         raise LookupError("Internal document not found")
-    storage.delete(document.object_key)
+    object_key = document.object_key
     session.delete(document)
     session.flush()
+    return object_key

@@ -1,3 +1,4 @@
+import logging
 from uuid import UUID
 
 from fastapi import (
@@ -41,6 +42,8 @@ from backend.api.schemas import (
 from backend.db import DocumentSuggestion, InternalDocument, get_session
 from backend.storage import ObjectStorageError, get_object_storage
 from internal_index import semantic_search
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1")
 
@@ -188,6 +191,15 @@ def internal_document_detail(document_id: UUID) -> dict:
         document = session.get(InternalDocument, document_id)
         if document is None:
             raise HTTPException(status_code=404, detail="Internal document not found")
+        if not document.chunks:
+            try:
+                restore_missing_chunks(document, get_object_storage(), session)
+            except ObjectStorageError:
+                logger.warning(
+                    "Unable to restore clauses for internal document %s",
+                    document_id,
+                    exc_info=True,
+                )
         payload = _internal_summary(document)
         payload["chunks"] = [
             {
@@ -212,7 +224,12 @@ def internal_document_pdf_url(document_id: UUID) -> dict[str, str]:
             raise HTTPException(status_code=404, detail="Internal document not found")
         object_key = document.object_key
     try:
-        return {"url": get_object_storage().presigned_get_url(object_key, 900)}
+        storage = get_object_storage()
+        if not storage.exists(object_key):
+            raise HTTPException(status_code=404, detail="Stored PDF is unavailable")
+        return {"url": storage.presigned_get_url(object_key, 900)}
+    except HTTPException:
+        raise
     except ObjectStorageError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
@@ -221,11 +238,18 @@ def internal_document_pdf_url(document_id: UUID) -> dict[str, str]:
 def remove_internal_document(document_id: UUID) -> Response:
     with get_session() as session:
         try:
-            delete_internal_document(document_id, get_object_storage(), session)
+            object_key = delete_internal_document(document_id, session)
         except LookupError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
-        except ObjectStorageError as exc:
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
+    try:
+        get_object_storage().delete(object_key)
+    except ObjectStorageError:
+        logger.warning(
+            "Database record %s was deleted, but object cleanup failed for %s",
+            document_id,
+            object_key,
+            exc_info=True,
+        )
     return Response(status_code=204)
 
 

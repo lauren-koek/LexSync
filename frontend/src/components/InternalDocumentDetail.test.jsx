@@ -60,3 +60,28 @@ test('deletes a document exactly once before returning to the library', async ()
     url === '/api/v1/internal-documents/doc-1' && options?.method === 'DELETE'
   )).toHaveLength(1)
 })
+
+test('shows clauses and a friendly message when the stored PDF is missing', async () => {
+  vi.spyOn(globalThis, 'fetch')
+    .mockResolvedValueOnce({ ok: true, json: async () => ({
+      id: 'doc-1', title: 'Policy', filename: 'policy.pdf', size_bytes: 100,
+      chunk_count: 1, status: 'indexed', created_at: null,
+      chunks: [{
+        id: 'chunk-1', clause_reference: 'Clause 1', content: 'Keep records.',
+        review_status: 'not_checked', review_reason: null, last_reviewed_at: null,
+      }],
+      suggestions: [],
+    }) })
+    .mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      json: async () => ({ detail: 'Stored PDF is unavailable' }),
+    })
+
+  render(<InternalDocumentDetail documentId="doc-1" onBack={vi.fn()} onDeleted={vi.fn()} />)
+
+  expect(await screen.findByText('PDF preview unavailable.')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Analysis' }))
+  expect(screen.getByText('Clause 1')).toBeInTheDocument()
+  expect(screen.getByText('Keep records.')).toBeInTheDocument()
+})

@@ -15,13 +15,21 @@ export default function InternalDocumentDetail({ documentId, onBack, onDeleted }
 
   async function load() {
     setError(null)
+    setDocument(null)
+    setPdfUrl('')
     try {
-      const [detail, pdf] = await Promise.all([
-        fetchInternalDocument(documentId), fetchInternalDocumentPdfUrl(documentId),
-      ])
+      const detail = await fetchInternalDocument(documentId)
       setDocument(detail)
+    } catch (err) {
+      setError(err.message)
+      return
+    }
+    try {
+      const pdf = await fetchInternalDocumentPdfUrl(documentId)
       setPdfUrl(pdf.url)
-    } catch (err) { setError(err.message) }
+    } catch {
+      setPdfUrl('')
+    }
   }
 
   useEffect(() => { load() }, [documentId])

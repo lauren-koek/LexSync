@@ -15,6 +15,9 @@ class FakeClient:
         self.get = kwargs
         return {"Body": SimpleNamespace(read=lambda: b"%PDF-restored")}
 
+    def head_object(self, **kwargs):
+        self.head = kwargs
+
     def put_object(self, **kwargs):
         self.puts.append(kwargs)
 
@@ -68,6 +71,7 @@ def test_storage_put_delete_and_presign_use_exact_object(monkeypatch):
 
     storage.put("internal-documents/id/policy.pdf", b"pdf", "application/pdf")
     content = storage.get("internal-documents/id/policy.pdf")
+    exists = storage.exists("internal-documents/id/policy.pdf")
     url = storage.presigned_get_url("internal-documents/id/policy.pdf", 120)
     storage.delete("internal-documents/id/policy.pdf")
 
@@ -78,6 +82,8 @@ def test_storage_put_delete_and_presign_use_exact_object(monkeypatch):
         "ContentType": "application/pdf",
     }]
     assert content == b"%PDF-restored"
+    assert exists is True
     assert client.get == {"Bucket": "legal-docs", "Key": "internal-documents/id/policy.pdf"}
+    assert client.head == {"Bucket": "legal-docs", "Key": "internal-documents/id/policy.pdf"}
     assert url == "signed://get_object/legal-docs/internal-documents/id/policy.pdf?ttl=120"
     assert client.deletes == [{"Bucket": "legal-docs", "Key": "internal-documents/id/policy.pdf"}]
