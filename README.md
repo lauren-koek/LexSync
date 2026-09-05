@@ -27,7 +27,6 @@ with [Running LexSync locally](#running-lexsync-locally). The FAQ explains
 | `Dockerfile` | Production image: builds React, installs Python/OCR tools, and runs FastAPI |
 | `docker-compose.yml` | Local pgvector/PostgreSQL only |
 | `railway.toml` | Railway build, web start command, health check, and restart policy |
-| `entrypoint.sh` | Optional always-running scheduled-pipeline worker |
 
 ## Running LexSync locally
 
@@ -147,7 +146,7 @@ The default input is
 needed:
 
 ```bash
-python backend/scraper/src/mas_regulations_scraper.py --days 7 --download-pdfs
+python backend/scraper/src/mas_regulations_scraper.py --days 7
 ```
 
 See [backend/docs/pipeline.md](backend/docs/pipeline.md) for all stages and
@@ -200,14 +199,14 @@ Docker setting.
 
 ### How do we deploy LexSync to Railway?
 
-The recommended Railway project has four resources:
+The current Railway project has three resources:
 
 1. **LexSync Web** — public service built from this repository.
-2. **Postgres** — private database used by both application services.
+2. **Postgres** — private database used by the web service.
 3. **Documents** — private Railway Bucket for original PDFs.
-4. **LexSync Pipeline** — recommended private worker for scheduled regulatory
-   updates. `railway.toml` does not create it automatically; add a second
-   service from the same repository.
+
+There is currently no automated Railway pipeline service. Regulatory pipeline
+runs are started manually when needed.
 
 #### A. Create the project and database
 
@@ -259,8 +258,7 @@ healthy and redeploy the web service.
 2. Open its **Credentials** tab. Railway Buckets are private and S3-compatible;
    the application does not make this bucket public.
 3. Add the five bucket reference variables above to the web service.
-4. Add the same references to the pipeline worker.
-5. Deploy the staged variable changes.
+4. Deploy the staged variable changes.
 
 Railway calls its bucket-name variable `BUCKET`, while LexSync expects
 `S3_BUCKET_NAME`; the reference maps between those names. Older buckets may
@@ -271,40 +269,6 @@ cannot connect.
 Official references: [Dockerfile deployments](https://docs.railway.com/builds/dockerfiles),
 [variable references](https://docs.railway.com/variables/reference), and
 [Storage Buckets](https://docs.railway.com/storage-buckets).
-
-#### D. Add the recommended scheduled-pipeline worker
-
-The checked-in Railway configuration starts only the web process. To automate
-regulatory monitoring:
-
-1. Add this GitHub repository to the Railway project a second time.
-2. Name the service `LexSync Pipeline` and do not create a public domain.
-3. Add the same database, OpenRouter, and bucket variables as the web service.
-4. Override the worker's start command with:
-
-```bash
-/app/entrypoint.sh
-```
-
-5. Optionally add:
-
-```dotenv
-PIPELINE_INTERVAL_HOURS=24
-SCRAPER_DAYS=7
-```
-
-6. Deploy and look for `PostgreSQL is ready`, `Starting pipeline run`, and
-   `Run complete` in its logs.
-
-`entrypoint.sh` waits for PostgreSQL, creates tables, applies migrations, runs
-the MAS scraper and pipeline, waits for the selected interval, then repeats.
-It is an **always-running worker**, so it consumes compute while waiting.
-
-Do not enable Railway's **Cron Schedule** while this worker uses
-`entrypoint.sh`. Railway cron processes must finish and exit, but this script
-contains an infinite scheduling loop. A future cost-saving change could add a
-one-shot script and schedule it in Railway Cron (which runs in UTC); that is
-not the current setup. See [Railway Cron Jobs](https://docs.railway.com/cron-jobs).
 
 ### How does blob storage work?
 
@@ -366,16 +330,16 @@ flowchart TB
             Startup --> DB
         end
 
-        subgraph WorkerService[LexSync Pipeline - private, recommended]
-            Loop[entrypoint.sh interval loop]
-            Scraper[MAS scraper<br/>Playwright and BeautifulSoup]
-            OCR[PDF extraction and OCR<br/>pdfplumber and Tesseract]
-            Pipeline[backend.pipeline<br/>processing and upsert]
-            Loop --> Scraper --> OCR --> Pipeline
-        end
-
         DB[(PostgreSQL 16 and pgvector<br/>documents, chunks, vectors,<br/>suggestions, migration state)]
         Bucket[(Private Railway Bucket<br/>original internal PDFs)]
+    end
+
+    subgraph ManualPipeline[Manual regulatory pipeline - not a Railway service]
+        Operator[Team member starts a run]
+        Scraper[MAS scraper<br/>Playwright and BeautifulSoup]
+        OCR[PDF extraction and OCR<br/>pdfplumber and Tesseract]
+        Pipeline[backend.pipeline<br/>processing and upsert]
+        Operator --> Scraper --> OCR --> Pipeline
     end
 
     ApiClient -->|same-origin /api/v1| API
@@ -407,7 +371,8 @@ The two main paths are:
 - **Interactive:** React calls FastAPI, which reads or writes PostgreSQL and
   the private bucket. Direct analysis is request-local and can use a
   deterministic offline fallback without OpenRouter.
-- **Monitoring:** the worker periodically scrapes MAS, extracts regulatory
+- **Manual regulatory processing:** a team member starts the scraper and
+  pipeline when updates need to be refreshed. The pipeline extracts regulatory
   PDFs, optionally asks OpenRouter for summaries, upserts regulations, searches
   the persistent internal vectors, and saves proposed changes. A suggestion
   failure is logged without rolling back successful regulatory ingestion.
@@ -426,8 +391,6 @@ The two main paths are:
 | `AWS_DEFAULT_REGION` | Internal PDF storage | Bucket region; Railway commonly supplies `auto` |
 | `AWS_ACCESS_KEY_ID` | Internal PDF storage | Secret S3 access-key ID |
 | `AWS_SECRET_ACCESS_KEY` | Internal PDF storage | Secret S3 access key |
-| `PIPELINE_INTERVAL_HOURS` | Optional worker | Hours between runs; default `24` |
-| `SCRAPER_DAYS` | Optional worker | Recent days scraped; default `7` |
 | `PORT` | Supplied by Railway | Uvicorn port; do not hardcode it on Railway |
 
 ### What API endpoints are available?
@@ -506,8 +469,6 @@ See [backend/docs/database.md](backend/docs/database.md) for schema details.
   `/api/v1/health` is reachable; do not use a fixed production port.
 - **Database startup:** confirm `DATABASE_URL` references the right healthy
   Postgres resource.
-- **Worker restarts:** check `/app/entrypoint.sh`, its database reference, and
-  the worker logs.
 - **Only uploads fail:** check bucket references. Storage is separate from the
   web health check.
 
@@ -533,8 +494,8 @@ Then open <http://localhost:8501>. React/FastAPI is the primary deployment.
   library is shared by everyone who can access the service.
 - PDF ingestion and embedding are synchronous. The first FastEmbed model load
   can make a request noticeably slower.
-- The worker is an always-running interval loop, not a one-shot Railway Cron
-  job or queue.
+- Regulatory ingestion is manual; no automated pipeline service is currently
+  deployed on Railway.
 - Real email delivery is not configured. `dispatch_updates(dry_run=True)` in
   `backend/analysis/notify.py` is the extension point; credentials must come
   from environment variables, never source code.
