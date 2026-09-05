@@ -9,6 +9,8 @@ python-dotenv
 sqlalchemy
 psycopg2-binary
 rich
+fastembed
+qdrant-client
 pydantic
 instructor
 openai
