@@ -1,0 +1,19 @@
+[tool.ruff]
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "UP", "I"]   # pycodestyle, pyflakes, pyupgrade, isort
+ignore = ["E501"]                 # don't enforce line length
+
+[tool.cspell]
+words = [
+    "openrouter",
+    "deepseek",
+    "dotenv",
+    "pytesseract",
+    "pdftoppm",
+    "poppler",
+    "tesseract",
+    "mas",
+    "pdfplumber",
+]
