@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import DateTime, Index, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy.types import JSON, Date, String, Text
+from sqlalchemy.types import JSON, Boolean, Date, String, Text
 
 # Dimensionality of the vectors written by backend/analysis/internal_index.py.
 # Must match whatever embed_text() there returns — a mismatch raises at
@@ -36,6 +36,12 @@ class Document(Base):
     llm_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     llm_categories: Mapped[Any] = mapped_column(JSON, nullable=True)
     llm_impact_check: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Set by backend/llm/hallucination_check.py via processor.py — flags a
+    # summary containing a number/date not found in the source text it was
+    # generated from, or with unusually low vocabulary overlap. Advisory
+    # only: it's surfaced for review, not used to block saving a summary.
+    llm_summary_flagged: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    llm_summary_check_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     scraped_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -94,4 +100,3 @@ class InternalDocumentChunk(Base):
             postgresql_ops={"embedding": "vector_cosine_ops"},
         ),
     )
-
