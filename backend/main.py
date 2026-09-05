@@ -19,7 +19,18 @@ def prepare_database() -> None:
     run_migrations()
 
 
-def _run_background_maintenance() -> None:
+def _startup_database() -> None:
+    # Runs off the request-serving path. Schema prep (create_tables + fast
+    # migrations) can block on locks held by a still-running previous deploy —
+    # during a rolling deploy the old container keeps serving until the new one
+    # is healthy, so a DDL statement here waits indefinitely and the healthcheck
+    # never passes, deadlocking the swap. Keeping it off-thread lets uvicorn
+    # answer /health immediately; once Railway swaps in this deploy the old one
+    # stops, the locks clear, and preparation completes.
+    try:
+        prepare_database()
+    except Exception:
+        logger.exception("Database preparation failed")
     try:
         run_background_migrations()
     except Exception:
@@ -30,11 +41,10 @@ def _run_background_maintenance() -> None:
 
 @asynccontextmanager
 async def lifespan(_app):
-    prepare_database()
-    # Slow maintenance runs off-thread so the healthcheck endpoint is reachable
-    # immediately instead of waiting for a full-database reindex to finish.
+    # Do not block startup on the database: the healthcheck endpoint needs no DB,
+    # and blocking here is what kept new deploys from ever going healthy.
     threading.Thread(
-        target=_run_background_maintenance, name="db-maintenance", daemon=True
+        target=_startup_database, name="db-startup", daemon=True
     ).start()
     yield
 
