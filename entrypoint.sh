@@ -37,7 +37,7 @@ days = int(os.environ.get("SCRAPER_DAYS", "7"))
 
 while True:
     print("Starting pipeline run...", flush=True)
-    scraper = "/app/backend/scraper/src/mas_regulations_scraper.py"
+    scraper = "/app/mas_regulations_scraper.py"
     if os.path.exists(scraper):
         result = subprocess.run(
             ["python", scraper, "--days", str(days), "--download-pdfs"],

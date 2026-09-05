@@ -17,6 +17,14 @@ _DEFAULT_OCR_DIR = Path("backend/scraper/output/ocr")
 _DATE_FORMAT = "%d %B %Y"
 
 
+def _pdf_url(doc: dict) -> str | None:
+    """Return the first PDF URL from either scraper output format."""
+    if doc.get("pdf_link"):
+        return doc["pdf_link"]
+    pdf_links = doc.get("pdf_links", [])
+    return pdf_links[0] if pdf_links else None
+
+
 def parse_date(date_str: str) -> date | None:
     if not date_str:
         return None
@@ -44,7 +52,7 @@ def _upsert_document(session, doc: dict, ocr_text: str | None, processed) -> Non
             tags=doc.get("tags", []),
             applies_to=doc.get("applies_to", []),
             related_items=doc.get("related_items", []),
-            pdf_url=doc.get("pdf_link"),
+            pdf_url=_pdf_url(doc),
             ocr_text=ocr_text,
             llm_summary=processed.llm_summary if processed else None,
             llm_categories=processed.llm_categories if processed else None,
@@ -61,7 +69,7 @@ def _upsert_document(session, doc: dict, ocr_text: str | None, processed) -> Non
         existing.tags = doc.get("tags", [])
         existing.applies_to = doc.get("applies_to", [])
         existing.related_items = doc.get("related_items", [])
-        existing.pdf_url = doc.get("pdf_link")
+        existing.pdf_url = _pdf_url(doc)
         if ocr_text is not None:
             existing.ocr_text = ocr_text
         if processed is not None:
@@ -102,7 +110,7 @@ def run(
         try:
             ocr_text: str | None = None
             if not skip_ocr:
-                pdf_url = doc.get("pdf_link")
+                pdf_url = _pdf_url(doc)
                 if pdf_url:
                     ocr_text = download_and_ocr(pdf_url, pdf_dir, ocr_dir)
                 else:
