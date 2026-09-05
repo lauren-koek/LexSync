@@ -22,7 +22,7 @@ done
 
 # Create tables if they don't exist.
 python - <<'EOF'
-from db import create_tables
+from backend.db import create_tables
 create_tables()
 print("Tables ready.")
 EOF
@@ -37,17 +37,18 @@ days = int(os.environ.get("SCRAPER_DAYS", "7"))
 
 while True:
     print("Starting pipeline run...", flush=True)
-    # Step 1: scrape
-    result = subprocess.run(
-        ["python", "scraper/src/mas_regulations_scraper.py",
-         "--days", str(days), "--download-pdfs"],
-        cwd="/app",
-    )
-    if result.returncode != 0:
-        print("Scraper failed, skipping pipeline step.", file=sys.stderr, flush=True)
-    else:
-        # Step 2: OCR + LLM + DB
-        subprocess.run(["python", "pipeline.py"], cwd="/app")
+    scraper = "/app/backend/scraper/src/mas_regulations_scraper.py"
+    if os.path.exists(scraper):
+        result = subprocess.run(
+            ["python", scraper, "--days", str(days), "--download-pdfs"],
+            cwd="/app",
+        )
+        if result.returncode != 0:
+            print("Scraper failed, skipping pipeline step.", file=sys.stderr, flush=True)
+            time.sleep(interval)
+            continue
+
+    subprocess.run(["python", "-m", "backend.pipeline"], cwd="/app")
 
     print(f"Run complete. Next run in {interval // 3600}h.", flush=True)
     time.sleep(interval)

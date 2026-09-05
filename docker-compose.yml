@@ -15,7 +15,7 @@ services:
       timeout: 5s
       retries: 5
 
-  pipeline:
+  api:
     build: .
     depends_on:
       postgres:
@@ -24,8 +24,25 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL}
       DATABASE_URL: ${DATABASE_URL:-postgresql://lexsync:lexsync@postgres:5432/lexsync}
+      FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:-http://localhost:3000}
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  pipeline:
+    build: .
+    command: ["/app/entrypoint.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://lexsync:lexsync@postgres:5432/lexsync}
+      PIPELINE_INTERVAL_HOURS: ${PIPELINE_INTERVAL_HOURS:-24}
+      SCRAPER_DAYS: ${SCRAPER_DAYS:-7}
     volumes:
-      - ./scraper/output:/app/scraper/output
+      - ./backend/scraper/output:/app/backend/scraper/output
     restart: unless-stopped
 
 volumes:

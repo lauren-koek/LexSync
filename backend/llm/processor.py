@@ -2,8 +2,8 @@ import json
 import logging
 from dataclasses import dataclass, field
 
-from llm.client import chat
-from llm.prompts.newsletter_prompt import PROMPT
+from backend.llm.client import chat
+from backend.llm.prompts.newsletter_prompt import PROMPT
 
 logger = logging.getLogger(__name__)
 

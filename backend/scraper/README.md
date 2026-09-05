@@ -4,7 +4,7 @@ Playwright-based scraper for the MAS Regulations and Guidance page.
 
 ## Output
 
-Produces `scraper/output/mas_regulations_and_guidance.json` — a JSON object with a `documents` array. Each entry contains:
+Produces `backend/scraper/output/mas_regulations_and_guidance.json` — a JSON object with a `documents` array. Each entry contains:
 
 | Field | Type | Description |
 |---|---|---|
@@ -21,10 +21,10 @@ Produces `scraper/output/mas_regulations_and_guidance.json` — a JSON object wi
 ## CLI
 
 ```bash
-python -m scraper.src.mas_regulations_scraper
+python -m backend.scraper.src.mas_regulations_scraper
 ```
 
-No flags required. Output is written to `scraper/output/`.
+No flags required. Output is written to `backend/scraper/output/`.
 
 ## Backend API
 
@@ -42,11 +42,11 @@ Example:
 
 ```python
 from pathlib import Path
-from scraper.src.pdf_ocr import download_and_ocr
+from backend.scraper.src.pdf_ocr import download_and_ocr
 
 text = download_and_ocr(
     url="https://www.mas.gov.sg/.../document.pdf",
-    pdf_dir=Path("scraper/output/pdfs"),
-    ocr_dir=Path("scraper/output/ocr"),
+    pdf_dir=Path("backend/scraper/output/pdfs"),
+    ocr_dir=Path("backend/scraper/output/ocr"),
 )
 ```

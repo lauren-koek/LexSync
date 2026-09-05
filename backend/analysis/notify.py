@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from rich.console import Console
@@ -32,6 +32,16 @@ INPUT_PATH = Path("impact_report.json")
 PLAYBOOK_OUTPUT_PATH = Path("updated_playbook.md")
 
 console = Console()
+
+
+def summarize_updates(report: list[dict], dry_run: bool = True) -> dict:
+    """Return a side-effect-free summary of affected clause updates."""
+    affected = [entry for entry in report if entry["analysis"]["is_affected"]]
+    return {
+        "dispatched": len(affected),
+        "dry_run": dry_run,
+        "timestamp": datetime.now(UTC).isoformat(),
+    }
 
 
 def render_diff(redline: str) -> Text:
@@ -117,7 +127,7 @@ def dispatch_updates(report: list[dict], dry_run: bool = True) -> dict:
     variables — never hardcode SMTP credentials in source.
     """
     affected = [e for e in report if e["analysis"]["is_affected"]]
-    dispatched_at = datetime.now(timezone.utc).isoformat()
+    dispatched_at = datetime.now(UTC).isoformat()
 
     if not affected:
         console.print("[dim]No affected clauses — nothing to propagate.[/]")
@@ -131,12 +141,6 @@ def dispatch_updates(report: list[dict], dry_run: bool = True) -> dict:
 
     for entry in affected:
         subject = f"[ACTION REQUIRED] Compliance update needed: {entry['asset']['title']}"
-        body_preview = (
-            f"<h2>{subject}</h2>"
-            f"<p><b>Impact score:</b> {entry['analysis']['impact_score']}/10</p>"
-            f"<p><b>Reasoning:</b> {entry['analysis']['legal_reasoning']}</p>"
-            f"<p><b>Proposed clause:</b> {entry['analysis']['proposed_amended_clause']}</p>"
-        )
 
         if dry_run:
             console.log(f"[bold yellow]DRY RUN[/] would send email — subject: '{subject}'")

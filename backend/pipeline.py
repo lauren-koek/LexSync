@@ -4,15 +4,15 @@ import logging
 from datetime import UTC, date, datetime
 from pathlib import Path
 
-from db import Document, create_tables, get_session
-from llm.processor import process_document
-from scraper.src.pdf_ocr import download_and_ocr
+from backend.db import Document, create_tables, get_session
+from backend.llm.processor import process_document
+from backend.scraper.src.pdf_ocr import download_and_ocr
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_JSON = Path("scraper/output/mas_regulations_and_guidance.json")
-_DEFAULT_PDF_DIR = Path("scraper/output/pdfs")
-_DEFAULT_OCR_DIR = Path("scraper/output/ocr")
+_DEFAULT_JSON = Path("backend/scraper/output/mas_regulations_and_guidance.json")
+_DEFAULT_PDF_DIR = Path("backend/scraper/output/pdfs")
+_DEFAULT_OCR_DIR = Path("backend/scraper/output/ocr")
 
 _DATE_FORMAT = "%d %B %Y"
 

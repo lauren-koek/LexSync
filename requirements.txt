@@ -8,14 +8,14 @@ pdfplumber
 python-dotenv
 sqlalchemy
 psycopg2-binary
-fastembed
-qdrant-client
 rich
 pydantic
 instructor
 openai
 streamlit
 pandas
+fastapi
+uvicorn[standard]
 
 # Optional, heavier document parser — ingest.py falls back to pdfplumber
 # automatically if this isn't installed. Uncomment to enable:

@@ -28,10 +28,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-import ingest
-import store
-import analyse
-import notify
+from backend.analysis import analyse, ingest, notify, store
 
 st.set_page_config(page_title="Legal Resilience Engine", page_icon="⚖️", layout="wide")
 

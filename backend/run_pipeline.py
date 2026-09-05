@@ -4,17 +4,14 @@ run_pipeline.py — Orchestrator
 Runs the full Legal Resilience Engine end to end: ingest -> store -> analyse
 -> notify. This is the single command for the CLI demo / video recording.
 
-python run_pipeline.py
+python -m backend.run_pipeline
 """
 
 from __future__ import annotations
 
 from rich.console import Console
 
-import ingest
-import store
-import analyse
-import notify
+from backend.analysis import analyse, ingest, notify, store
 
 console = Console()
 
