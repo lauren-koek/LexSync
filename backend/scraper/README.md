@@ -21,7 +21,7 @@ Produces `backend/scraper/output/mas_regulations_and_guidance.json` — a JSON o
 ## CLI
 
 ```bash
-python mas_regulations_scraper.py
+python -m backend.scraper.src.mas_regulations_scraper
 ```
 
 No flags required. Output is written to `backend/scraper/output/`.

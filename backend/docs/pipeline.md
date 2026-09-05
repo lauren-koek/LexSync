@@ -51,7 +51,7 @@ container.
 ### 1. Scraper only
 
 ```bash
-python mas_regulations_scraper.py
+python -m backend.scraper.src.mas_regulations_scraper
 ```
 
 Produces `backend/scraper/output/mas_regulations_and_guidance.json` when the
