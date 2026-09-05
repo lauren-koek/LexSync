@@ -1,7 +1,7 @@
 export default function TopBar({ days, onDaysChange, onFetch, loading }) {
   return (
     <header className="topbar">
-      <span className="topbar-title">LexSync</span>
+      <span className="updates-label">MAS regulatory feed</span>
       <label>
         Last
         <input

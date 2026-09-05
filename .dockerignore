@@ -13,3 +13,5 @@ scraper/output/ocr/
 scraper/output/*.json
 backend/scraper/output/*.json
 .DS_Store
+frontend/node_modules
+frontend/dist

@@ -1,7 +1,7 @@
 import DocumentCard from './DocumentCard.jsx'
 
-export default function DocumentList({ docs, selected, onSelect, loading, error, fetched, days }) {
-  if (error) {
+export default function DocumentList({ docs, selected, onSelect, loading, error, fetched, days, loadingMessage, emptyMessage }) {
+  if (error && docs.length === 0) {
     return (
       <aside className="doc-list">
         <div className="doc-list-error">Error: {error}</div>
@@ -13,7 +13,7 @@ export default function DocumentList({ docs, selected, onSelect, loading, error,
     return (
       <aside className="doc-list">
         <div className="doc-list-empty">
-          <span className="spinner" /> Scraping MAS &amp; processing documents… this may take a minute.
+          <span className="spinner" /> {loadingMessage || 'Scraping MAS & processing documents… this may take a minute.'}
         </div>
       </aside>
     )
@@ -30,7 +30,7 @@ export default function DocumentList({ docs, selected, onSelect, loading, error,
   if (docs.length === 0) {
     return (
       <aside className="doc-list">
-        <div className="doc-list-empty">No MAS documents found in the last {days} days.</div>
+        <div className="doc-list-empty">{emptyMessage || `No MAS documents found in the last ${days} days.`}</div>
       </aside>
     )
   }

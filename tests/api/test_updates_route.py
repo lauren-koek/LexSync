@@ -53,3 +53,26 @@ def test_updates_returns_empty_list_when_no_docs(monkeypatch):
 
     assert response.status_code == 200
     assert response.json() == []
+
+
+def test_documents_returns_saved_database_documents(monkeypatch):
+    saved = {
+        "id": "abc-123",
+        "title": "Saved circular",
+        "date": "2026-09-03",
+        "doc_type": "Circular",
+        "topic": "AML",
+        "tags": [],
+        "applies_to": [],
+        "source_url": "https://mas.gov.sg/saved",
+        "pdf_url": None,
+        "llm_summary": "Already processed.",
+        "llm_categories": [],
+        "llm_impact_check": None,
+    }
+    monkeypatch.setattr(routes, "list_documents", lambda: [saved], raising=False)
+
+    response = client.get("/api/v1/documents")
+
+    assert response.status_code == 200
+    assert response.json() == [saved]

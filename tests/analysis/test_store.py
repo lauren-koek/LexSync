@@ -1,5 +1,4 @@
 import numpy as np
-from qdrant_client import QdrantClient
 
 from backend.analysis import store
 
@@ -13,8 +12,11 @@ class StubEmbedder:
 
 
 def test_build_index_and_find_impacted_assets_semantically_match_internal_chunks(
-    monkeypatch,
+    monkeypatch, tmp_path,
 ):
+    monkeypatch.chdir(tmp_path)
+    from qdrant_client import QdrantClient
+
     vectors = {
         "dimension probe": [1.0, 0.0],
         "Regulation privacy clause": [1.0, 0.0],

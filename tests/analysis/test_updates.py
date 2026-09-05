@@ -161,3 +161,31 @@ def test_fetch_updates_processes_uncached_doc(mas_json, disable_scraper):
 def test_fetch_updates_returns_empty_when_json_missing(tmp_path, disable_scraper):
     results = fetch_updates(7, json_path=tmp_path / "nonexistent.json")
     assert results == []
+
+
+def test_list_documents_returns_newest_database_documents(monkeypatch):
+    from backend.analysis import updates
+
+    first = _make_existing_doc()
+    second = _make_existing_doc()
+    second.id = "uuid-2"
+    second.title = "Doc 2"
+
+    query = MagicMock()
+    query.order_by.return_value.limit.return_value.all.return_value = [first, second]
+    session = MagicMock()
+    session.query.return_value = query
+    context = MagicMock()
+    context.__enter__.return_value = session
+    context.__exit__.return_value = False
+    monkeypatch.setattr(updates, "get_session", lambda: context)
+
+    results = updates.list_documents()
+
+    ordering = query.order_by.call_args.args
+    assert [str(expression) for expression in ordering] == [
+        "documents.date DESC NULLS LAST",
+        "documents.created_at DESC",
+    ]
+    query.order_by.return_value.limit.assert_called_once_with(50)
+    assert [doc["title"] for doc in results] == ["Doc 1", "Doc 2"]

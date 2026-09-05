@@ -110,6 +110,21 @@ def fetch_updates(days: int, json_path: Path = _DEFAULT_JSON) -> list[dict]:
     return results
 
 
+def list_documents(limit: int = _MAX_RESULTS) -> list[dict]:
+    """Return saved documents in newest-first order."""
+    with get_session() as session:
+        docs = (
+            session.query(Document)
+            .order_by(
+                Document.date.desc().nullslast(),
+                Document.created_at.desc(),
+            )
+            .limit(limit)
+            .all()
+        )
+        return [_doc_to_dict(doc) for doc in docs]
+
+
 def _within_window(doc: dict, cutoff: date) -> bool:
     parsed = parse_date(doc.get("date", ""))
     return parsed is not None and parsed >= cutoff
