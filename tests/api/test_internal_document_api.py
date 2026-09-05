@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -48,3 +49,26 @@ def test_search_rejects_blank_query():
     response = client.post("/api/v1/internal-documents/search", json={"query": "   "})
 
     assert response.status_code == 422
+
+
+def test_internal_document_detail_includes_clause_review_status(monkeypatch):
+    document = SimpleNamespace(
+        id=uuid4(), title="Policy", filename="policy.pdf", content_type="application/pdf",
+        size_bytes=100, status="outdated", chunk_count=1, created_at=None, updated_at=None,
+        chunks=[SimpleNamespace(
+            id=uuid4(), clause_reference="Clause 2", content="Simple majority.",
+            review_status="outdated", review_reason="The voting threshold changed.",
+            last_reviewed_at=None,
+        )], suggestions=[],
+    )
+
+    @contextmanager
+    def session_scope():
+        yield SimpleNamespace(get=lambda *_: document)
+
+    monkeypatch.setattr(routes, "get_session", session_scope)
+
+    response = client.get(f"/api/v1/internal-documents/{document.id}")
+
+    assert response.status_code == 200
+    assert response.json()["chunks"][0]["review_status"] == "outdated"

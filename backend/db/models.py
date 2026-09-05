@@ -121,6 +121,13 @@ class InternalDocumentChunk(Base):
     embedding: Mapped[list[float]] = mapped_column(
         Vector(INTERNAL_EMBEDDING_DIM), nullable=False
     )
+    review_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="not_checked"
+    )
+    review_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

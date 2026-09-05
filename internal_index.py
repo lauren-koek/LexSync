@@ -171,6 +171,7 @@ def find_impacted_assets(
     regulatory_chunk_text: str,
     limit: int = 3,
     session: Session | None = None,
+    internal_document_id=None,
 ) -> list[dict]:
     """Return internal-asset chunks semantically closest to a regulation
     clause, above SIMILARITY_THRESHOLD, most similar first.
@@ -189,8 +190,13 @@ def find_impacted_assets(
     )
 
     with _session_scope(session) as active_session:
+        query = active_session.query(InternalDocumentChunk, distance_column)
+        if internal_document_id is not None:
+            query = query.filter(
+                InternalDocumentChunk.internal_document_id == internal_document_id
+            )
         rows = (
-            active_session.query(InternalDocumentChunk, distance_column)
+            query
             .order_by(distance_column)
             .limit(limit)
             .all()

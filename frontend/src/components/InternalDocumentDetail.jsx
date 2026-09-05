@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, RefreshCw, Trash2 } from 'lucide-react'
 import { deleteInternalDocument, fetchInternalDocument, fetchInternalDocumentPdfUrl, reanalyzeInternalDocument } from '../api.js'
 import Button from './ui/Button.jsx'
+import Badge from './ui/Badge.jsx'
 import SuggestionCard from './SuggestionCard.jsx'
 
 export default function InternalDocumentDetail({ documentId, onBack, onDeleted }) {
@@ -59,7 +60,7 @@ export default function InternalDocumentDetail({ documentId, onBack, onDeleted }
           >{view[0].toUpperCase() + view.slice(1)}</button>)}
         </div>
         <div className="ml-auto flex gap-2">
-          <Button size="sm" variant="secondary" disabled={busy} onClick={reanalyze}><RefreshCw size={14} /> Re-run analysis</Button>
+          <Button size="sm" variant="secondary" disabled={busy} onClick={reanalyze}>{busy ? <><span className="spinner" /> Checking every clause…</> : <><RefreshCw size={14} /> Re-run analysis</>}</Button>
           <Button size="sm" variant="secondary" disabled={busy} onClick={remove}><Trash2 size={14} /> Delete</Button>
         </div>
       </div>
@@ -72,7 +73,16 @@ export default function InternalDocumentDetail({ documentId, onBack, onDeleted }
           <p className="mt-1 text-sm text-muted">{document.filename} · {document.chunk_count} clauses</p>
           <input aria-label="Filter extracted clauses" value={filter} onChange={event => setFilter(event.target.value)} placeholder="Filter extracted clauses…" className="mt-5 h-9 w-full rounded-lg border border-border bg-white px-3 text-sm" />
           <div className="mt-4 space-y-3">
-            {chunks.map(chunk => <article key={chunk.id} className="rounded-lg border border-border bg-card p-4"><h2 className="text-sm">{chunk.clause_reference}</h2><p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">{chunk.content}</p></article>)}
+            {chunks.map(chunk => <article key={chunk.id} className="rounded-lg border border-border bg-card p-4">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm">{chunk.clause_reference}</h2>
+                <Badge tone={chunk.review_status === 'outdated' ? 'red' : chunk.review_status === 'current' ? 'sage' : 'neutral'}>
+                  {chunk.review_status === 'outdated' ? 'Outdated' : chunk.review_status === 'current' ? 'Current' : 'Not checked'}
+                </Badge>
+              </div>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">{chunk.content}</p>
+              {chunk.review_reason && <p className="mt-3 border-t border-border pt-3 text-xs text-muted">{chunk.review_reason}</p>}
+            </article>)}
           </div>
           <h2 className="mb-3 mt-6 text-sm">Suggested changes ({document.suggestions.length})</h2>
           <div className="space-y-3">{document.suggestions.map(item => <SuggestionCard key={item.id} suggestion={item} />)}</div>

@@ -91,6 +91,31 @@ def test_analysis_saves_only_affected_matches(session, records, monkeypatch):
     assert saved.redline_diff
 
 
+def test_analysis_deduplicates_same_amendment_from_overlapping_regulation_clauses(
+    session, records, monkeypatch
+):
+    regulation, internal, chunk = records
+    regulation.ocr_text = "Section 1. Three-fourths approval.\nSection 2. Three-fourths approval."
+    monkeypatch.setattr(
+        suggestions,
+        "find_impacted_assets",
+        lambda *args, **kwargs: [{
+            "internal_document_id": str(internal.id),
+            "internal_chunk_id": str(chunk.id),
+            "similarity_score": 0.91,
+            "content": chunk.content,
+            "clause_reference": chunk.clause_reference,
+        }],
+    )
+
+    count = suggestions.analyze_regulatory_document(
+        regulation.id, session, analyze=lambda *_: affected()
+    )
+
+    assert count == 1
+    assert session.query(DocumentSuggestion).count() == 1
+
+
 def test_rerun_updates_pending_but_preserves_reviewed_suggestion(
     session, records, monkeypatch
 ):
@@ -124,3 +149,81 @@ def test_rerun_updates_pending_but_preserves_reviewed_suggestion(
 def test_status_change_rejects_unknown_state(session, records):
     with pytest.raises(ValueError, match="status"):
         suggestions.set_suggestion_status(records[2].id, "archived", session)
+
+
+def test_reanalysis_marks_every_clause_current_or_outdated(session, records, monkeypatch):
+    regulation, internal, outdated_chunk = records
+    current_chunk = InternalDocumentChunk(
+        document=internal,
+        title="Incident Policy — Clause 2",
+        clause_reference="Clause 2",
+        content="Clause 2. Staff receive annual training.",
+        embedding=[0.0] * 384,
+    )
+    session.add(current_chunk)
+    session.flush()
+    monkeypatch.setattr(suggestions, "_rechunk_legacy_document", lambda *args: None)
+    monkeypatch.setattr(
+        suggestions,
+        "find_impacted_assets",
+        lambda *args, **kwargs: [{
+            "internal_document_id": str(internal.id),
+            "internal_chunk_id": str(outdated_chunk.id),
+            "similarity_score": 0.91,
+            "content": outdated_chunk.content,
+            "clause_reference": outdated_chunk.clause_reference,
+        }],
+    )
+    result = suggestions.reanalyze_internal_document(
+        internal.id, session, analyze=lambda *_: affected()
+    )
+
+    assert result == {"suggestion_count": 1, "checked_clause_count": 2, "outdated_clause_count": 1}
+    assert outdated_chunk.review_status == "outdated"
+    assert current_chunk.review_status == "current"
+    assert outdated_chunk.last_reviewed_at is not None
+    assert internal.status == "outdated"
+
+
+def test_offline_analysis_detects_notice_643_majority_and_reporting_gaps():
+    majority = suggestions.analyse._mock_analysis(
+        "Paragraph 26 requires approval of a special majority of three-fourths of its board.",
+        "Clause 2. Approval requires a simple majority of the Board.",
+    )
+    reporting = suggestions.analyse.analyze_document_gaps(
+        "Paragraph 18. Every exception to the RPT PP must be reported to the board on a quarterly basis.",
+        "The policy contains no process for reporting exceptions.",
+        client=None,
+    )
+
+    assert majority.is_affected is True
+    assert "three-fourths" in majority.proposed_amended_clause
+    assert len(reporting) == 1
+    assert "quarter" in reporting[0].proposed_amended_clause.lower()
+
+
+def test_document_gap_is_persisted_and_marks_policy_outdated(session, records, monkeypatch):
+    regulation, internal, chunk = records
+    regulation.title = "Notice 643 Transactions with Related Parties"
+    regulation.ocr_text = (
+        "MAS Notice 643 paragraph 18 requires every exception to be reported "
+        "to the board on a quarterly basis."
+    )
+    chunk.content += " Regulatory basis: MAS Notice 643."
+    finding = suggestions.analyse.MissingObligation(
+        impact_score=8,
+        legal_reasoning="Quarterly Board reporting is missing.",
+        proposed_amended_clause="Report every exception to the Board quarterly.",
+        statutory_citations=["MAS Notice 643, paragraph 18"],
+    )
+    monkeypatch.setattr(suggestions.analyse, "analyze_document_gaps", lambda *_: [finding])
+    monkeypatch.setattr(suggestions.analyse, "_get_instructor_client", lambda: None)
+
+    count = suggestions._save_document_gaps(regulation, internal, session)
+    session.flush()
+
+    saved = session.query(DocumentSuggestion).one()
+    assert count == 1
+    assert saved.proposed_amended_clause == "Report every exception to the Board quarterly."
+    assert saved.redline_diff.startswith("{+")
+    assert chunk.review_status == "outdated"

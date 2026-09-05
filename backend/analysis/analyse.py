@@ -45,6 +45,17 @@ class LegalImpactAnalysis(BaseModel):
     statutory_citations: list[str] = Field(description="List of relevant statutory sections cited.")
 
 
+class MissingObligation(BaseModel):
+    impact_score: int = Field(ge=1, le=10)
+    legal_reasoning: str
+    proposed_amended_clause: str
+    statutory_citations: list[str]
+
+
+class DocumentGapAnalysis(BaseModel):
+    findings: list[MissingObligation] = Field(default_factory=list, max_length=10)
+
+
 def _get_instructor_client():
     """Build an `instructor`-patched OpenAI client pointed at OpenRouter.
 
@@ -103,6 +114,42 @@ def analyze_clause_impact(regulation: str, asset: str) -> LegalImpactAnalysis:
     return _mock_analysis(regulation, asset)
 
 
+def analyze_document_gaps(
+    regulation: str,
+    asset: str,
+    client="default",
+) -> list[MissingObligation]:
+    """Find mandatory regulatory obligations omitted from the whole document."""
+    active_client = _get_instructor_client() if client == "default" else client
+    if active_client is not None:
+        try:
+            result = active_client.chat.completions.create(
+                model=OPENROUTER_MODEL,
+                response_model=DocumentGapAnalysis,
+                max_retries=2,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a senior legal compliance analyst. Identify material "
+                            "mandatory obligations in the regulation that are entirely absent "
+                            "from the internal policy. Do not report wording differences or "
+                            "contradictions covered by an existing clause. Return only genuine "
+                            "omissions and draft one concise policy clause for each omission."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": f"REGULATION:\n{regulation}\n\nINTERNAL POLICY:\n{asset}",
+                    },
+                ],
+            )
+            return result.findings
+        except Exception:
+            pass
+    return _mock_gap_analysis(regulation, asset)
+
+
 def _mock_analysis(regulation: str, asset: str) -> LegalImpactAnalysis:
     """Deterministic offline fallback: flags numeric/duration mismatches.
 
@@ -115,6 +162,30 @@ def _mock_analysis(regulation: str, asset: str) -> LegalImpactAnalysis:
     rewritten clause replaces the *entire* "spelled-out (digit) unit" span
     atomically, rather than leaving orphaned parentheses/words behind.
     """
+    reg_lower = regulation.lower()
+    asset_lower = asset.lower()
+    if (
+        "special majority of three-fourths" in reg_lower
+        and "simple majority" in asset_lower
+    ):
+        proposed = re.sub(
+            r"simple majority(?: of the board)?(?:\s*\([^)]*\))?",
+            "special majority of three-fourths of the Board",
+            asset,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+        return LegalImpactAnalysis(
+            is_affected=True,
+            impact_score=9,
+            legal_reasoning=(
+                "The regulation requires a special majority of three-fourths, "
+                "which conflicts with the policy's simple-majority threshold."
+            ),
+            proposed_amended_clause=proposed,
+            statutory_citations=["MAS Notice 643, paragraph 26"],
+        )
+
     DURATION_RE = re.compile(
         r"[A-Za-z-]+\s*\((\d+)\)\s*(day|month|year|hour)s?", re.IGNORECASE
     )
@@ -153,6 +224,39 @@ def _mock_analysis(regulation: str, asset: str) -> LegalImpactAnalysis:
         proposed_amended_clause=proposed,
         statutory_citations=[citation] if is_affected else [],
     )
+
+
+def _mock_gap_analysis(regulation: str, asset: str) -> list[MissingObligation]:
+    """Conservative offline checks for explicit obligations absent from a policy."""
+    reg_lower = regulation.lower()
+    asset_lower = asset.lower()
+    requires_quarterly_exception_reporting = (
+        "quarterly basis" in reg_lower
+        and "exception" in reg_lower
+        and "report" in reg_lower
+        and "board" in reg_lower
+    )
+    policy_has_requirement = (
+        "quarter" in asset_lower
+        and "exception" in asset_lower
+        and "report" in asset_lower
+        and "board" in asset_lower
+    )
+    if not requires_quarterly_exception_reporting or policy_has_requirement:
+        return []
+    return [MissingObligation(
+        impact_score=8,
+        legal_reasoning=(
+            "The regulation requires every exception to or non-compliance with "
+            "the RPT policy to be reported to the Board quarterly, but the policy "
+            "contains no equivalent reporting obligation."
+        ),
+        proposed_amended_clause=(
+            "Every exception to or non-compliance with this RPT Policy must be "
+            "reported to the Board on a quarterly basis."
+        ),
+        statutory_citations=["MAS Notice 643, paragraph 18"],
+    )]
 
 
 def generate_redline_diff(old_text: str, new_text: str) -> str:

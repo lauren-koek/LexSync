@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from types import SimpleNamespace
 
 import pytest
 
@@ -9,6 +10,10 @@ from backend.storage.objects import S3ObjectStorage, StorageConfigurationError
 class FakeClient:
     puts: list
     deletes: list
+
+    def get_object(self, **kwargs):
+        self.get = kwargs
+        return {"Body": SimpleNamespace(read=lambda: b"%PDF-restored")}
 
     def put_object(self, **kwargs):
         self.puts.append(kwargs)
@@ -62,6 +67,7 @@ def test_storage_put_delete_and_presign_use_exact_object(monkeypatch):
     storage = S3ObjectStorage(client_factory=lambda **kwargs: client)
 
     storage.put("internal-documents/id/policy.pdf", b"pdf", "application/pdf")
+    content = storage.get("internal-documents/id/policy.pdf")
     url = storage.presigned_get_url("internal-documents/id/policy.pdf", 120)
     storage.delete("internal-documents/id/policy.pdf")
 
@@ -71,5 +77,7 @@ def test_storage_put_delete_and_presign_use_exact_object(monkeypatch):
         "Body": b"pdf",
         "ContentType": "application/pdf",
     }]
+    assert content == b"%PDF-restored"
+    assert client.get == {"Bucket": "legal-docs", "Key": "internal-documents/id/policy.pdf"}
     assert url == "signed://get_object/legal-docs/internal-documents/id/policy.pdf?ttl=120"
     assert client.deletes == [{"Bucket": "legal-docs", "Key": "internal-documents/id/policy.pdf"}]

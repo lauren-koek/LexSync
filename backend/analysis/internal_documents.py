@@ -118,6 +118,36 @@ def ingest_pdf(
     return IngestionResult(document, False)
 
 
+def restore_missing_chunks(
+    document: InternalDocument,
+    storage: ObjectStorage,
+    session: Session,
+    embed: Callable[[str], list[float]] = embed_text,
+) -> int:
+    """Rebuild clause rows from the original object after legacy migration loss."""
+    if document.chunks:
+        return len(document.chunks)
+    extracted = extract_pdf_bytes(storage.get(document.object_key))
+    raw_chunks = chunk_legal_document(extracted, "INTERNAL_ASSET", str(document.id))
+    restored = []
+    for raw in raw_chunks:
+        vector = [float(value) for value in embed(raw["content"])]
+        if len(vector) != EMBEDDING_DIM:
+            raise InternalDocumentValidationError(
+                f"Embedding must contain exactly {EMBEDDING_DIM} dimensions"
+            )
+        restored.append(InternalDocumentChunk(
+            title=f"{document.title} — {raw['clause_reference']}",
+            clause_reference=raw["clause_reference"],
+            content=raw["content"],
+            embedding=vector,
+        ))
+    document.chunks = restored
+    document.chunk_count = len(restored)
+    session.flush()
+    return len(restored)
+
+
 def delete_internal_document(
     document_id: UUID, storage: ObjectStorage, session: Session
 ) -> None:

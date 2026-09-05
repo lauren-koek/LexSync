@@ -8,8 +8,11 @@ test('shows the PDF full-width by default and switches to analysis', async () =>
   vi.spyOn(globalThis, 'fetch')
     .mockResolvedValueOnce({ ok: true, json: async () => ({
       id: 'doc-1', title: 'Policy', filename: 'policy.pdf', size_bytes: 100,
-      chunk_count: 1, status: 'indexed', created_at: '2026-09-06T00:00:00Z',
-      chunks: [{ id: 'chunk-1', clause_reference: 'Clause 1', content: 'Keep records.' }],
+      chunk_count: 2, status: 'outdated', created_at: '2026-09-06T00:00:00Z',
+      chunks: [
+        { id: 'chunk-1', clause_reference: 'Clause 1', content: 'Keep records.', review_status: 'outdated', review_reason: 'Retention changed.', last_reviewed_at: '2026-09-06T01:00:00Z' },
+        { id: 'chunk-2', clause_reference: 'Clause 2', content: 'Train staff.', review_status: 'current', review_reason: 'No conflict found.', last_reviewed_at: '2026-09-06T01:00:00Z' },
+      ],
       suggestions: [{
         id: 'suggestion-1', regulatory_document_id: 'reg-1', internal_document_id: 'doc-1',
         internal_chunk_id: 'chunk-1', regulation_clause_reference: 'Section 2',
@@ -31,7 +34,9 @@ test('shows the PDF full-width by default and switches to analysis', async () =>
 
   expect(screen.queryByTitle('Policy PDF')).not.toBeInTheDocument()
   expect(screen.getByText('Clause 1')).toBeInTheDocument()
-  expect(screen.getByText('Retention changed.')).toBeInTheDocument()
+  expect(screen.getByText('Outdated')).toBeInTheDocument()
+  expect(screen.getByText('Current')).toBeInTheDocument()
+  expect(screen.getAllByText('Retention changed.')).toHaveLength(2)
   expect(screen.getByText('three years')).toBeInTheDocument()
   expect(screen.getByText('seven years')).toBeInTheDocument()
 })

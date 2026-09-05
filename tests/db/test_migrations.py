@@ -1,3 +1,4 @@
+import importlib
 from types import SimpleNamespace
 
 from backend.db.migrations import runner
@@ -26,3 +27,14 @@ def test_run_migrations_applies_numbered_modules_in_order(monkeypatch):
         "backend.db.migrations.0002_second",
         "backend.db.migrations.0003_third",
     ]
+
+
+def test_internal_document_migration_is_safe_to_rerun():
+    migration = importlib.import_module(
+        "backend.db.migrations.0003_add_internal_documents_and_suggestions"
+    )
+
+    assert all(
+        sql.strip().upper() != "DELETE FROM INTERNAL_DOCUMENT_CHUNKS"
+        for sql in migration.STATEMENTS
+    )

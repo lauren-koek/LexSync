@@ -98,6 +98,9 @@ class InternalChunkResponse(BaseModel):
     id: str
     clause_reference: str
     content: str
+    review_status: str
+    review_reason: str | None = None
+    last_reviewed_at: str | None = None
 
 
 class SuggestionResponse(BaseModel):

@@ -113,6 +113,41 @@ def test_ingest_pdf_rejects_wrong_embedding_dimension(session, monkeypatch):
     assert storage.puts == []
 
 
+def test_numbered_policy_headings_are_ingested_as_individual_clauses():
+    text = """MERIDIAN BANK\nDocument ref: RC-POL-014\n1. Purpose\nManage conflicts.\n2. Board Approval Threshold\nA simple majority is required.\n3. Reporting\nExceptions are recorded."""
+
+    chunks = internal_documents.chunk_legal_document(text, "INTERNAL_ASSET", "doc-1")
+
+    assert [chunk["clause_reference"] for chunk in chunks] == [
+        "General", "1. Purpose", "2. Board Approval Threshold", "3. Reporting",
+    ]
+
+
+def test_restore_missing_chunks_from_stored_pdf(session, monkeypatch):
+    document = InternalDocument(
+        title="Policy", filename="policy.pdf", object_key="internal-documents/id/policy.pdf",
+        content_type="application/pdf", size_bytes=10, sha256="b" * 64,
+        status="indexed", chunk_count=1,
+    )
+    session.add(document)
+    session.flush()
+    storage = FakeStorage()
+    storage.get = lambda _: b"%PDF-stored"
+    monkeypatch.setattr(
+        internal_documents,
+        "extract_pdf_bytes",
+        lambda _: "1. Purpose\nManage conflicts.\n2. Approval\nA simple majority is required.",
+    )
+
+    restored = internal_documents.restore_missing_chunks(
+        document, storage, session, embed=lambda _: [0.0] * 384
+    )
+
+    assert restored == 2
+    assert document.chunk_count == 2
+    assert [chunk.clause_reference for chunk in document.chunks] == ["1. Purpose", "2. Approval"]
+
+
 def test_database_failure_deletes_only_new_object(session, monkeypatch):
     storage = FakeStorage()
     monkeypatch.setattr(internal_documents, "extract_pdf_bytes", lambda _: "Clause 1. Text")

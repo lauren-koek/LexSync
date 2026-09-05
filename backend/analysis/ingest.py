@@ -40,7 +40,7 @@ OVERLAP_WORDS = 50
 # "Article 3", "§ 5.2" — used as preferred split points so we don't cut a
 # clause in half.
 CLAUSE_BOUNDARY_RE = re.compile(
-    r"(?m)^\s*(Section\s+\d+[A-Za-z]?\.?|Clause\s+\d+(\.\d+)*\.?|Article\s+\d+\.?|§\s?\d+(\.\d+)*)",
+    r"(?m)^\s*(Section\s+\d+[A-Za-z]?\.?|Clause\s+\d+(?:\.\d+)*\.?|Article\s+\d+\.?|§\s?\d+(?:\.\d+)*|\d+(?:\.\d+)*\.\s+[^\n]+|\d+(?=\s+[A-Z]))",
 )
 
 
@@ -115,10 +115,15 @@ def chunk_legal_document(text: str, source_type: str, doc_id: str) -> list[dict]
 
     if boundaries:
         segments: list[tuple[str, str]] = []  # (clause_reference, text)
+        preamble = text[:boundaries[0].start()].strip()
+        if preamble:
+            segments.append(("General", preamble))
         for i, match in enumerate(boundaries):
             start = match.start()
             end = boundaries[i + 1].start() if i + 1 < len(boundaries) else len(text)
             clause_ref = match.group(1).strip().rstrip(".")
+            if clause_ref.isdigit():
+                clause_ref = f"Paragraph {clause_ref}"
             segments.append((clause_ref, text[start:end].strip()))
     else:
         segments = [("General", text)]

@@ -16,6 +16,7 @@ from backend.analysis.internal_documents import (
     InternalDocumentValidationError,
     delete_internal_document,
     ingest_pdf,
+    restore_missing_chunks,
 )
 from backend.analysis.service import run_analysis
 from backend.analysis.suggestions import (
@@ -193,6 +194,9 @@ def internal_document_detail(document_id: UUID) -> dict:
                 "id": str(chunk.id),
                 "clause_reference": chunk.clause_reference,
                 "content": chunk.content,
+                "review_status": chunk.review_status,
+                "review_reason": chunk.review_reason,
+                "last_reviewed_at": _iso(chunk.last_reviewed_at),
             }
             for chunk in document.chunks
         ]
@@ -228,9 +232,12 @@ def remove_internal_document(document_id: UUID) -> Response:
 @router.post("/internal-documents/{document_id}/reanalyze")
 def reanalyze_internal(document_id: UUID) -> dict[str, int]:
     with get_session() as session:
-        if session.get(InternalDocument, document_id) is None:
+        document = session.get(InternalDocument, document_id)
+        if document is None:
             raise HTTPException(status_code=404, detail="Internal document not found")
-        return {"suggestion_count": reanalyze_internal_document(document_id, session)}
+        if not document.chunks:
+            restore_missing_chunks(document, get_object_storage(), session)
+        return reanalyze_internal_document(document_id, session)
 
 
 @router.post("/documents/{document_id}/reanalyze")

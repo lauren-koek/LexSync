@@ -19,9 +19,9 @@ STATEMENTS = (
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ
     )""",
-    "DELETE FROM internal_document_chunks",
     "ALTER TABLE internal_document_chunks DROP COLUMN IF EXISTS doc_id",
     "ALTER TABLE internal_document_chunks ADD COLUMN IF NOT EXISTS internal_document_id UUID",
+    "DELETE FROM internal_document_chunks WHERE internal_document_id IS NULL",
     """DO $$ BEGIN
         ALTER TABLE internal_document_chunks
         ADD CONSTRAINT fk_internal_chunks_document
