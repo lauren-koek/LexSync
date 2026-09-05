@@ -21,8 +21,14 @@ Output: one JSON file, one record per document, e.g.:
   "url": "https://www.mas.gov.sg/regulation/circulars/id10_26",
   "summary": "...",
   "topic": "Valuation and Capital",
+  "effective_date": "01 July 2026",
   "tags": ["Valuation and Capital"],
   "applies_to": ["Direct Insurer (Life)", "Direct Insurer (General)", ...],
+  "issued_pursuant_to_text": "Banking Act 1970 section 27 and section 55",
+  "issued_pursuant_to": [
+      {"section": "section 27", "url": "https://sso.agc.gov.sg/Act/BA1970?ProvIds=pr27-"},
+      {"section": "section 55", "url": "https://sso.agc.gov.sg/Act/BA1970?ProvIds=pr55-"}
+  ],
   "pdf_links": ["https://www.mas.gov.sg/-/media/.../id10_26.pdf"],
   "related_items": [
       {"title": "Notice FHC-N133 on ...", "url": "https://www.mas.gov.sg/regulation/notices/notice-fhc-n133", "doc_type": "Notices"}
@@ -139,6 +145,18 @@ def parse_listing(html: str) -> list[dict]:
 def parse_detail(html: str) -> dict:
     soup = BeautifulSoup(html, "html.parser")
 
+    # Keep commencement as source metadata instead of asking the LLM to infer
+    # it from document text.
+    effective_date = None
+    effective_label = soup.find(
+        string=lambda s: s and s.strip().lower() == "effective date:"
+    )
+    if effective_label and effective_label.parent:
+        container = effective_label.parent.parent
+        if container:
+            full_text = container.get_text(" ", strip=True)
+            effective_date = full_text.split(":", 1)[-1].strip() or None
+
     # PDF download link(s) — some documents (e.g. consultations) have
     # multiple attachments (main paper + annexes).
     pdf_links = []
@@ -165,6 +183,25 @@ def parse_detail(html: str) -> dict:
         if applies_container:
             applies_to = [a.get_text(strip=True) for a in applies_container.select("a")]
 
+    # "Issued pursuant to" — the empowering Act/section(s) this instrument is
+    # made under, each an external link to the specific statute section on SSO.
+    # The label reads e.g. "Issued pursuant to: Banking Act 1970 section 27 and
+    # section 55"; we capture the plain text plus each section's hyperlink.
+    issued_pursuant_to_text = None
+    issued_pursuant_to = []
+    issued_label = soup.find(string=lambda s: s and s.strip() == "Issued pursuant to:")
+    if issued_label:
+        issued_container = issued_label.parent.parent if issued_label.parent else None
+        if issued_container:
+            # Full readable text of the clause (Act name + sections), minus the label.
+            full_text = issued_container.get_text(" ", strip=True)
+            issued_pursuant_to_text = full_text.replace("Issued pursuant to:", "").strip() or None
+            for a in issued_container.select("a[href]"):
+                label = a.get_text(strip=True)
+                if not label:
+                    continue
+                issued_pursuant_to.append({"section": label, "url": absolutize(a["href"])})
+
     # "Related to this Item" documents.
     related_items = []
     related_container = soup.select_one(".related-to-this-regulation-listing")
@@ -182,9 +219,12 @@ def parse_detail(html: str) -> dict:
                 )
 
     return {
+        "effective_date": effective_date,
         "pdf_links": pdf_links,
         "tags": tags,
         "applies_to": applies_to,
+        "issued_pursuant_to_text": issued_pursuant_to_text,
+        "issued_pursuant_to": issued_pursuant_to,
         "related_items": related_items,
     }
 
@@ -204,7 +244,11 @@ def enrich_with_details(page, records: list[dict]) -> None:
             print(f"[{i}/{total}] OK  {record['title'][:70]}")
         except Exception as e:
             print(f"[{i}/{total}] FAILED  {record.get('url')}  ({e})")
-            record.update({"pdf_links": [], "tags": [], "applies_to": [], "related_items": []})
+            record.update({
+                "effective_date": None, "pdf_links": [], "tags": [], "applies_to": [],
+                "issued_pursuant_to_text": None, "issued_pursuant_to": [],
+                "related_items": [],
+            })
         time.sleep(DETAIL_PAGE_DELAY_SECONDS)
 
 

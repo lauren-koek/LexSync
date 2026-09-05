@@ -25,10 +25,15 @@ class Document(Base):
     source_url: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
     doc_type: Mapped[str | None] = mapped_column(String(100))
     date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    effective_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     title: Mapped[str | None] = mapped_column(Text)
     topic: Mapped[str | None] = mapped_column(Text, nullable=True)
     tags: Mapped[Any] = mapped_column(JSON)
     applies_to: Mapped[Any] = mapped_column(JSON)
+    # Readable "Issued pursuant to" clause plus a list of {section, url} links
+    # to the empowering statute provisions on Singapore Statutes Online (SSO).
+    issued_pursuant_to_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    issued_pursuant_to: Mapped[Any] = mapped_column(JSON, nullable=True)
     related_items: Mapped[Any] = mapped_column(JSON)
     pdf_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     pdf_local_path: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -1,10 +1,27 @@
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from backend.api.routes import app
+from backend.db import create_tables
+from backend.db.migrations.runner import run_migrations
+
+
+def prepare_database() -> None:
+    create_tables()
+    run_migrations()
+
+
+@asynccontextmanager
+async def lifespan(_app):
+    prepare_database()
+    yield
+
+
+app.router.lifespan_context = lifespan
 
 
 def frontend_origins() -> list[str]:

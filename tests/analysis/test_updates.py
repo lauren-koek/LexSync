@@ -104,6 +104,7 @@ def _make_existing_doc():
     doc.id = "uuid-1"
     doc.title = "Doc 1"
     doc.date = date.today() - timedelta(days=2)
+    doc.effective_date = date(2026, 7, 1)
     doc.doc_type = "Circular"
     doc.topic = "AML"
     doc.tags = []
@@ -113,6 +114,14 @@ def _make_existing_doc():
     doc.llm_categories = ["Financial Services"]
     doc.llm_impact_check = "No impact"
     return doc
+
+
+def test_document_response_serialises_scraped_effective_date():
+    from backend.analysis.updates import _doc_to_dict
+
+    result = _doc_to_dict(_make_existing_doc())
+
+    assert result["effective_date"] == "2026-07-01"
 
 
 def test_fetch_updates_excludes_old_docs(mas_json, disable_scraper):

@@ -23,8 +23,10 @@ done
 # Create tables if they don't exist.
 python - <<'EOF'
 from backend.db import create_tables
+from backend.db.migrations.runner import run_migrations
 create_tables()
-print("Tables ready.")
+run_migrations()
+print("Tables and migrations ready.")
 EOF
 
 # Run the pipeline on a schedule.

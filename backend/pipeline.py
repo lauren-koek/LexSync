@@ -40,6 +40,7 @@ def _upsert_document(session, doc: dict, ocr_text: str | None, processed) -> Non
     existing = session.query(Document).filter_by(source_url=source_url).first()
 
     parsed_date = parse_date(doc.get("date", ""))
+    parsed_effective_date = parse_date(doc.get("effective_date", ""))
     now = datetime.now(tz=UTC)
 
     if existing is None:
@@ -48,9 +49,12 @@ def _upsert_document(session, doc: dict, ocr_text: str | None, processed) -> Non
             title=doc.get("title"),
             doc_type=doc.get("doc_type"),
             date=parsed_date,
+            effective_date=parsed_effective_date,
             topic=doc.get("topic"),
             tags=doc.get("tags", []),
             applies_to=doc.get("applies_to", []),
+            issued_pursuant_to_text=doc.get("issued_pursuant_to_text"),
+            issued_pursuant_to=doc.get("issued_pursuant_to", []),
             related_items=doc.get("related_items", []),
             pdf_url=_pdf_url(doc),
             ocr_text=ocr_text,
@@ -65,9 +69,12 @@ def _upsert_document(session, doc: dict, ocr_text: str | None, processed) -> Non
         existing.title = doc.get("title")
         existing.doc_type = doc.get("doc_type")
         existing.date = parsed_date
+        existing.effective_date = parsed_effective_date
         existing.topic = doc.get("topic")
         existing.tags = doc.get("tags", [])
         existing.applies_to = doc.get("applies_to", [])
+        existing.issued_pursuant_to_text = doc.get("issued_pursuant_to_text")
+        existing.issued_pursuant_to = doc.get("issued_pursuant_to", [])
         existing.related_items = doc.get("related_items", [])
         existing.pdf_url = _pdf_url(doc)
         if ocr_text is not None:

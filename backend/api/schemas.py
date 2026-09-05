@@ -56,16 +56,23 @@ class AnalysisResponse(BaseModel):
 
 class UpdatesRequest(BaseModel):
     days: int = Field(ge=1, description="Lookback window in days")
+    refresh: bool = Field(
+        default=False,
+        description="Re-pull scraped metadata for already-saved documents (skips OCR/LLM re-processing)",
+    )
 
 
 class DocumentResponse(BaseModel):
     id: str | None
     title: str | None
     date: str | None
+    effective_date: str | None = None
     doc_type: str | None
     topic: str | None
     tags: list[str]
     applies_to: list[str]
+    issued_pursuant_to_text: str | None = None
+    issued_pursuant_to: list[dict[str, Any]] = []
     source_url: str
     pdf_url: str | None
     llm_summary: str | None

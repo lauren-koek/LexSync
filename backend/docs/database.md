@@ -10,6 +10,7 @@ PostgreSQL 16. SQLAlchemy 2.x models in `db/models.py`. Tables are created autom
 | `source_url` | text | No | Document page URL (unique) |
 | `doc_type` | varchar(100) | Yes | e.g. `"Circular"`, `"Guidelines"` |
 | `date` | date | Yes | Publication date parsed from scraper output |
+| `effective_date` | date | Yes | Effective date parsed from the source detail page |
 | `title` | text | Yes | Document title |
 | `topic` | text | Yes | Regulatory topic from MAS |
 | `tags` | jsonb | Yes | Array of free-text tags |
