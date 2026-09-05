@@ -72,8 +72,9 @@ def test_documents_returns_saved_database_documents(monkeypatch):
         "pdf_url": None,
         "llm_summary": "Already processed.",
         "llm_categories": [],
-        "llm_impact_check": None,
-    }
+            "llm_impact_check": None,
+            "suggestion_count": 0,
+        }
     monkeypatch.setattr(routes, "list_documents", lambda: [saved], raising=False)
 
     response = client.get("/api/v1/documents")

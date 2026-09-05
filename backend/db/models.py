@@ -49,6 +49,9 @@ class Document(Base):
     updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), onupdate=func.now()
     )
+    suggestions: Mapped[list["DocumentSuggestion"]] = relationship(
+        back_populates="regulatory_document", cascade="all, delete-orphan"
+    )
 
 
 class InternalDocument(Base):
@@ -163,6 +166,7 @@ class DocumentSuggestion(Base):
 
     internal_document: Mapped[InternalDocument] = relationship(back_populates="suggestions")
     internal_chunk: Mapped[InternalDocumentChunk] = relationship(back_populates="suggestions")
+    regulatory_document: Mapped[Document] = relationship(back_populates="suggestions")
 
     __table_args__ = (
         UniqueConstraint(

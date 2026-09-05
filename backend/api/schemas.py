@@ -78,3 +78,69 @@ class DocumentResponse(BaseModel):
     llm_summary: str | None
     llm_categories: list[str]
     llm_impact_check: str | None
+    suggestion_count: int = 0
+
+
+class InternalDocumentSummary(BaseModel):
+    id: str
+    title: str
+    filename: str
+    content_type: str
+    size_bytes: int
+    status: str
+    chunk_count: int
+    created_at: str | None
+    updated_at: str | None
+    deduplicated: bool = False
+
+
+class InternalChunkResponse(BaseModel):
+    id: str
+    clause_reference: str
+    content: str
+
+
+class SuggestionResponse(BaseModel):
+    id: str
+    regulatory_document_id: str
+    internal_document_id: str
+    internal_chunk_id: str
+    regulation_clause_reference: str
+    regulation_content: str
+    similarity_score: float
+    is_affected: bool
+    impact_score: int
+    legal_reasoning: str
+    proposed_amended_clause: str
+    statutory_citations: list[str]
+    redline_diff: str
+    analysis_source: str
+    status: str
+
+
+class InternalDocumentDetail(InternalDocumentSummary):
+    chunks: list[InternalChunkResponse]
+    suggestions: list[SuggestionResponse]
+
+
+class SemanticSearchRequest(BaseModel):
+    query: str = Field(min_length=1)
+    limit: int = Field(default=10, ge=1, le=50)
+
+    @field_validator("query")
+    @classmethod
+    def reject_blank_query(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("query must not be blank")
+        return value.strip()
+
+
+class SuggestionStatusRequest(BaseModel):
+    status: str
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, value: str) -> str:
+        if value not in {"pending", "accepted", "dismissed"}:
+            raise ValueError("invalid suggestion status")
+        return value

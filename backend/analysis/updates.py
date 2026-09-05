@@ -162,4 +162,5 @@ def _doc_to_dict(doc: Document) -> dict:
         "llm_summary": doc.llm_summary,
         "llm_categories": doc.llm_categories or [],
         "llm_impact_check": doc.llm_impact_check,
+        "suggestion_count": len(doc.suggestions),
     }
