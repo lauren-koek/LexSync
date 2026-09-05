@@ -30,7 +30,7 @@ from contextlib import contextmanager
 
 from sqlalchemy.orm import Session
 
-from backend.db.models import InternalDocumentChunk
+from backend.db.models import InternalDocument, InternalDocumentChunk
 from backend.db.session import get_session
 from backend.llm import client as llm_client
 
@@ -150,16 +150,18 @@ def build_index(chunks: list[dict], session: Session | None = None) -> int:
     if not internal_chunks:
         return 0
 
-    doc_ids = {chunk["doc_id"] for chunk in internal_chunks}
+    document_ids = {chunk.get("internal_document_id") for chunk in internal_chunks}
+    if None in document_ids:
+        raise ValueError("Persistent chunks require internal_document_id")
 
     with _session_scope(session) as active_session:
         active_session.query(InternalDocumentChunk).filter(
-            InternalDocumentChunk.doc_id.in_(doc_ids)
+            InternalDocumentChunk.internal_document_id.in_(document_ids)
         ).delete(synchronize_session=False)
 
         rows = [
             InternalDocumentChunk(
-                doc_id=chunk["doc_id"],
+                internal_document_id=chunk["internal_document_id"],
                 title=chunk["title"],
                 clause_reference=chunk["clause_reference"],
                 content=chunk["content"],
@@ -205,19 +207,76 @@ def find_impacted_assets(
             .all()
         )
 
-    results = []
+        results = []
+        for chunk, distance in rows:
+            similarity_score = 1.0 - float(distance)
+            if similarity_score < SIMILARITY_THRESHOLD:
+                continue
+            results.append(
+                {
+                    "similarity_score": round(similarity_score, 4),
+                    "internal_document_id": str(chunk.internal_document_id),
+                    "internal_chunk_id": str(chunk.id),
+                    "source_type": "INTERNAL_ASSET",
+                    "title": chunk.document.title,
+                    "clause_reference": chunk.clause_reference,
+                    "content": chunk.content,
+                }
+            )
+        return results
+
+
+def group_search_rows(
+    rows: list[tuple[InternalDocumentChunk, float]],
+    limit: int,
+    excerpts_per_document: int,
+    threshold: float = SIMILARITY_THRESHOLD,
+) -> list[dict]:
+    grouped: dict[str, dict] = {}
     for chunk, distance in rows:
-        similarity_score = 1.0 - float(distance)
-        if similarity_score < SIMILARITY_THRESHOLD:
+        score = 1.0 - float(distance)
+        if score < threshold:
             continue
-        results.append(
-            {
-                "similarity_score": round(similarity_score, 4),
-                "doc_id": chunk.doc_id,
-                "source_type": "INTERNAL_ASSET",
-                "title": chunk.title,
+        key = str(chunk.document.id)
+        if key not in grouped:
+            if len(grouped) >= limit:
+                continue
+            grouped[key] = {
+                "id": key,
+                "title": chunk.document.title,
+                "filename": chunk.document.filename,
+                "score": round(score, 4),
+                "excerpts": [],
+            }
+        excerpts = grouped[key]["excerpts"]
+        if len(excerpts) < excerpts_per_document:
+            excerpts.append({
+                "chunk_id": str(chunk.id),
                 "clause_reference": chunk.clause_reference,
                 "content": chunk.content,
-            }
+                "score": round(score, 4),
+            })
+    return list(grouped.values())
+
+
+def semantic_search(
+    query: str,
+    limit: int = 10,
+    excerpts_per_document: int = 3,
+    session: Session | None = None,
+) -> list[dict]:
+    if not query.strip():
+        raise ValueError("Search query must not be blank")
+    query_vector = embed_text(query)
+    distance_column = InternalDocumentChunk.embedding.cosine_distance(query_vector).label(
+        "distance"
+    )
+    with _session_scope(session) as active_session:
+        rows = (
+            active_session.query(InternalDocumentChunk, distance_column)
+            .join(InternalDocument)
+            .order_by(distance_column)
+            .limit(limit * excerpts_per_document * 3)
+            .all()
         )
-    return results
+        return group_search_rows(rows, limit, excerpts_per_document)

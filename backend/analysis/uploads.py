@@ -12,11 +12,30 @@ SUPPORTED_SUFFIXES = {".txt", ".pdf"}
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
 
+class PDFExtractionError(ValueError):
+    """The supplied bytes are not a readable, text-bearing PDF."""
+
+
+def extract_pdf_bytes(content: bytes) -> str:
+    """Strictly extract text from PDF bytes for durable ingestion."""
+    try:
+        with pdfplumber.open(BytesIO(content)) as pdf:
+            if pdf.doc.is_encrypted:
+                raise PDFExtractionError("Encrypted PDFs are not supported")
+            text = "\n".join(page.extract_text() or "" for page in pdf.pages)
+    except PDFExtractionError:
+        raise
+    except Exception as exc:
+        raise PDFExtractionError("PDF is malformed or unreadable") from exc
+    if not text.strip():
+        raise PDFExtractionError("PDF contains no extractable text")
+    return text
+
+
 def _extract_pdf(content: bytes) -> str:
     """Extract text only from a successfully parsed PDF."""
     try:
-        with pdfplumber.open(BytesIO(content)) as pdf:
-            return "\n".join(page.extract_text() or "" for page in pdf.pages)
+        return extract_pdf_bytes(content)
     except Exception as exc:
         raise HTTPException(
             status_code=422,
