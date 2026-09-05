@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -27,6 +28,8 @@ def analyze_regulatory_document(
     session: Session,
     analyze: Callable[[str, str], LegalImpactAnalysis] = analyse.analyze_clause_impact,
     internal_document_id: UUID | None = None,
+    find_matches: Callable[[dict], list[dict]] | None = None,
+    analysis_workers: int = 1,
 ) -> int:
     document = session.get(Document, document_id)
     if document is None:
@@ -37,21 +40,38 @@ def analyze_regulatory_document(
     regulation_chunks = ingest.chunk_legal_document(
         document.ocr_text, "REGULATION", str(document.id)
     )
-    staged = []
+    pairs = []
     for regulation in regulation_chunks:
-        for match in find_impacted_assets(
-            regulation["content"],
-            limit=50 if internal_document_id else 3,
-            session=session,
-            internal_document_id=internal_document_id,
-        ):
+        if find_matches:
+            matches = find_matches(regulation)
+        else:
+            matches = find_impacted_assets(
+                regulation["content"],
+                limit=50 if internal_document_id else 3,
+                session=session,
+                internal_document_id=internal_document_id,
+            )
+        for match in matches:
             match_document_id = UUID(match["internal_document_id"])
             if internal_document_id and match_document_id != internal_document_id:
                 continue
-            result = analyze(regulation["content"], match["content"])
-            if not result.is_affected:
-                continue
-            staged.append((regulation, match, result))
+            pairs.append((regulation, match))
+
+    def run_pair(pair):
+        regulation, match = pair
+        return regulation, match, analyze(regulation["content"], match["content"])
+
+    if analysis_workers > 1 and len(pairs) > 1:
+        with ThreadPoolExecutor(max_workers=analysis_workers) as executor:
+            analyzed = list(executor.map(run_pair, pairs))
+    else:
+        analyzed = [run_pair(pair) for pair in pairs]
+
+    staged = []
+    for regulation, match, result in analyzed:
+        if not result.is_affected:
+            continue
+        staged.append((regulation, match, result))
 
     deduplicated = {}
     for regulation, match, result in staged:
@@ -155,6 +175,47 @@ def _notice_references(text: str) -> set[str]:
     }
 
 
+_LEGAL_STOPWORDS = {
+    "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
+    "in", "is", "it", "of", "on", "or", "that", "the", "this", "to",
+    "with", "must", "shall",
+}
+
+
+def _legal_terms(text: str) -> set[str]:
+    return {
+        token for token in re.findall(r"[a-z0-9]+", text.lower())
+        if len(token) > 2 and token not in _LEGAL_STOPWORDS
+    }
+
+
+def _direct_notice_matcher(
+    internal: InternalDocument,
+    regulation_chunks: list[dict],
+    candidates_per_clause: int = 2,
+) -> Callable[[dict], list[dict]]:
+    """Rank cited-notice clauses locally, without loading an embedding model."""
+    matches_by_content: dict[str, list[dict]] = {}
+    for internal_chunk in internal.chunks:
+        asset_terms = _legal_terms(internal_chunk.content)
+        ranked = []
+        for regulation in regulation_chunks:
+            regulation_terms = _legal_terms(regulation["content"])
+            overlap = len(asset_terms & regulation_terms)
+            score = overlap / max(1, len(asset_terms | regulation_terms))
+            ranked.append((score, regulation))
+        candidates = sorted(ranked, key=lambda item: item[0], reverse=True)
+        for score, regulation in candidates[:candidates_per_clause]:
+            matches_by_content.setdefault(regulation["content"], []).append({
+                "internal_document_id": str(internal.id),
+                "internal_chunk_id": str(internal_chunk.id),
+                "similarity_score": round(score, 4),
+                "content": internal_chunk.content,
+                "clause_reference": internal_chunk.clause_reference,
+            })
+    return lambda regulation: matches_by_content.get(regulation["content"], [])
+
+
 def _save_document_gaps(
     regulatory: Document,
     internal: InternalDocument,
@@ -230,11 +291,32 @@ def reanalyze_internal_document(
 
     total = 0
     documents = session.query(Document).filter(Document.ocr_text.is_not(None)).all()
-    for document in documents:
-        total += analyze_regulatory_document(
-            document.id, session, analyze=analyze, internal_document_id=document_id
-        )
-        total += _save_document_gaps(document, internal, session)
+    asset_text = "\n\n".join(chunk.content for chunk in internal.chunks)
+    references = _notice_references(asset_text)
+    cited_documents = [
+        document for document in documents
+        if references & _notice_references(f"{document.title or ''}\n{document.ocr_text or ''}")
+    ]
+    if references and cited_documents:
+        for document in cited_documents:
+            regulation_chunks = ingest.chunk_legal_document(
+                document.ocr_text or "", "REGULATION", str(document.id)
+            )
+            total += analyze_regulatory_document(
+                document.id,
+                session,
+                analyze=analyze,
+                internal_document_id=document_id,
+                find_matches=_direct_notice_matcher(internal, regulation_chunks),
+                analysis_workers=4,
+            )
+            total += _save_document_gaps(document, internal, session)
+    else:
+        for document in documents:
+            total += analyze_regulatory_document(
+                document.id, session, analyze=analyze, internal_document_id=document_id
+            )
+            total += _save_document_gaps(document, internal, session)
     outdated = sum(chunk.review_status == "outdated" for chunk in internal.chunks)
     internal.status = "outdated" if outdated else "current"
     session.flush()

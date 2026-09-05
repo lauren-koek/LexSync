@@ -227,3 +227,45 @@ def test_document_gap_is_persisted_and_marks_policy_outdated(session, records, m
     assert saved.proposed_amended_clause == "Report every exception to the Board quarterly."
     assert saved.redline_diff.startswith("{+")
     assert chunk.review_status == "outdated"
+
+
+def test_cited_notice_fast_path_bypasses_vector_search(session, records, monkeypatch):
+    regulation, internal, chunk = records
+    regulation.title = "Notice 643 Transactions with Related Parties"
+    regulation.ocr_text = (
+        "MAS Notice 643\n26 A bank must obtain a special majority of "
+        "three-fourths of its board."
+    )
+    chunk.content += " Regulatory basis: MAS Notice 643."
+    unrelated = Document(
+        source_url="https://mas.example/notice-999",
+        title="Notice 999 Unrelated Requirements",
+        tags=[], applies_to=[], related_items=[],
+        ocr_text="MAS Notice 999\n1 Firms must submit an annual return.",
+    )
+    session.add(unrelated)
+    session.flush()
+    observed_regulation_text = []
+
+    def analyze(regulation_text, _asset_text):
+        observed_regulation_text.append(regulation_text)
+        return LegalImpactAnalysis(
+            is_affected=False, impact_score=1, legal_reasoning="Current.",
+            proposed_amended_clause=chunk.content, statutory_citations=[],
+        )
+
+    monkeypatch.setattr(
+        suggestions,
+        "find_impacted_assets",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("vector search must not run for an explicitly cited notice")
+        ),
+    )
+    monkeypatch.setattr(suggestions, "_save_document_gaps", lambda *_: 0)
+
+    result = suggestions.reanalyze_internal_document(internal.id, session, analyze=analyze)
+
+    assert result["checked_clause_count"] == 1
+    assert observed_regulation_text
+    assert any("three-fourths" in text for text in observed_regulation_text)
+    assert all("annual return" not in text for text in observed_regulation_text)
