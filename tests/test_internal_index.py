@@ -1,6 +1,22 @@
 from types import SimpleNamespace
 
+import internal_index
 from internal_index import group_search_rows
+
+
+def test_embed_text_uses_the_established_fastembed_model(monkeypatch):
+    class FakeVector:
+        def tolist(self):
+            return [0.5] * 384
+
+    class FakeEmbedder:
+        def embed(self, texts):
+            assert texts == ["reporting obligations"]
+            return iter([FakeVector()])
+
+    monkeypatch.setattr(internal_index, "get_semantic_embedder", lambda: FakeEmbedder())
+
+    assert internal_index.embed_text("reporting obligations") == [0.5] * 384
 
 
 def test_group_search_rows_collapses_chunks_and_limits_excerpts():

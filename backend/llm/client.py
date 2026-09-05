@@ -166,7 +166,6 @@ def chat(
         temperature=temperature,
     )
 
-
 def stream_chat(
     prompt: str,
     *,

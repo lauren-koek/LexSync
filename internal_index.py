@@ -32,17 +32,18 @@ from sqlalchemy.orm import Session
 
 from backend.db.models import InternalDocument, InternalDocumentChunk
 from backend.db.session import get_session
-from backend.llm import client as llm_client
 
 # Must match INTERNAL_EMBEDDING_DIM in backend/db/models.py — the pgvector
 # column is a fixed width, so every embedding written or queried has to be
 # exactly this many components.
 EMBEDDING_DIM = 384
+EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
 
 # Below this cosine similarity, a match is considered noise rather than a
 # genuine semantic hit. Mirrors store.py's SIMILARITY_THRESHOLD so results
 # from either index are comparable.
 SIMILARITY_THRESHOLD = 0.50
+_semantic_embedder = None
 
 
 # ---------------------------------------------------------------------------
@@ -52,39 +53,27 @@ SIMILARITY_THRESHOLD = 0.50
 def embed_text(text_value: str) -> list[float]:
     """Return a unit-length, EMBEDDING_DIM-wide vector for `text_value`.
 
-    Tries a hosted embedding model first (real semantic embeddings); if no
-    API key is configured or the request fails for any reason (network,
-    rate limit, provider outage), falls back to a deterministic offline
-    embedding. This is the same "never hard-fail without a key" contract
-    `analyse.py` uses for its mock LLM analysis — the index stays usable
-    for demos and tests with zero external setup, at the cost of the
-    offline vectors only capturing literal word overlap rather than
-    genuine semantic similarity.
+    Uses the repository's established local FastEmbed BGE model. If the model
+    cannot initialize or infer, it falls back to a deterministic lexical
+    vector so offline startup remains available.
     """
-    remote_vector = _fetch_remote_embedding(text_value)
-    if remote_vector is not None:
-        return remote_vector
+    try:
+        vector = next(get_semantic_embedder().embed([text_value])).tolist()
+        if len(vector) == EMBEDDING_DIM:
+            return [float(component) for component in vector]
+    except Exception:
+        pass
     return _offline_embedding(text_value)
 
 
-def _fetch_remote_embedding(text_value: str) -> list[float] | None:
-    """Call the hosted embeddings endpoint via the shared OpenRouter client
-    (backend/llm/client.py). Returns None on any failure — no API key
-    configured, network error, or a provider response client.embed()
-    couldn't parse — so the caller can fall back to the offline embedding
-    instead of the whole index write/read failing.
-    """
-    try:
-        vector = llm_client.embed(text_value, dimensions=EMBEDDING_DIM)
-    except Exception:
-        return None
+def get_semantic_embedder():
+    """Lazily create the process-wide 384-dimension BGE embedder."""
+    global _semantic_embedder
+    if _semantic_embedder is None:
+        from fastembed import TextEmbedding
 
-    # A provider that ignores `dimensions` (or a misconfigured model name)
-    # would otherwise write a vector pgvector rejects at insert time — bail
-    # out to the offline fallback instead of crashing the caller.
-    if len(vector) != EMBEDDING_DIM:
-        return None
-    return [float(component) for component in vector]
+        _semantic_embedder = TextEmbedding(model_name=EMBEDDING_MODEL)
+    return _semantic_embedder
 
 
 _TOKEN_RE = re.compile(r"[a-z0-9]+")

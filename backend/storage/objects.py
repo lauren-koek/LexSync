@@ -7,11 +7,11 @@ from functools import lru_cache
 from typing import Protocol
 
 
-class StorageConfigurationError(RuntimeError):
+class ObjectStorageError(RuntimeError):
     pass
 
 
-class ObjectStorageError(RuntimeError):
+class StorageConfigurationError(ObjectStorageError):
     pass
 
 

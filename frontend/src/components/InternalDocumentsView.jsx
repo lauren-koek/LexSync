@@ -20,7 +20,7 @@ export default function InternalDocumentsView() {
   const [uploading, setUploading] = useState(false)
   const [notice, setNotice] = useState('')
 
-  if (openedId) return <InternalDocumentDetail documentId={openedId} onBack={() => setOpenedId(null)} onDeleted={id => { library.remove(id); setOpenedId(null) }} />
+  if (openedId) return <InternalDocumentDetail documentId={openedId} onBack={() => setOpenedId(null)} onDeleted={() => { setOpenedId(null); library.resetSearch() }} />
 
   async function submitUpload(event) {
     event.preventDefault()

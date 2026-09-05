@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, expect, test, vi } from 'vitest'
 import InternalDocumentDetail from './InternalDocumentDetail.jsx'
 
@@ -28,4 +28,24 @@ test('shows the PDF beside extracted clauses and suggestions', async () => {
   expect(screen.getByText('Retention changed.')).toBeInTheDocument()
   expect(screen.getByText('three years')).toBeInTheDocument()
   expect(screen.getByText('seven years')).toBeInTheDocument()
+})
+
+test('deletes a document exactly once before returning to the library', async () => {
+  const onDeleted = vi.fn()
+  vi.spyOn(window, 'confirm').mockReturnValue(true)
+  const fetchMock = vi.spyOn(globalThis, 'fetch')
+    .mockResolvedValueOnce({ ok: true, json: async () => ({
+      id: 'doc-1', title: 'Policy', filename: 'policy.pdf', size_bytes: 100,
+      chunk_count: 0, status: 'indexed', created_at: null, chunks: [], suggestions: [],
+    }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ url: 'signed://pdf' }) })
+    .mockResolvedValueOnce({ ok: true, status: 204 })
+
+  render(<InternalDocumentDetail documentId="doc-1" onBack={vi.fn()} onDeleted={onDeleted} />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Delete' }))
+
+  await waitFor(() => expect(onDeleted).toHaveBeenCalledWith('doc-1'))
+  expect(fetchMock.mock.calls.filter(([url, options]) =>
+    url === '/api/v1/internal-documents/doc-1' && options?.method === 'DELETE'
+  )).toHaveLength(1)
 })

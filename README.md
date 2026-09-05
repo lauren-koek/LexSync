@@ -78,7 +78,8 @@ presigned URLs; no bucket object is public.
 
 Uploads are limited to 10 MB and must contain extractable text. Image-only and
 encrypted PDFs are rejected. Successful uploads are split into legal clauses,
-embedded, and stored in PostgreSQL/pgvector before the request returns.
+embedded with the local 384-dimension `BAAI/bge-small-en-v1.5` FastEmbed model,
+and stored in PostgreSQL/pgvector before the request returns.
 
 After a regulatory document is saved with OCR text, the MAS pipeline searches
 the persistent internal index and saves suggested changes. Failed suggestion
