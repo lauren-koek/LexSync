@@ -8,60 +8,60 @@
 
 const INTERNAL_DOCS = [
   {
-    docName: 'Client Onboarding & KYC Policy',
-    section: 'Clause 4.2 — Counterparty exposure limits',
+    docName: 'Related Party Transaction (RPT) Approval Policy',
+    section: 'Section 2 — Board Approval Threshold',
     original:
-      'Aggregate exposure to a single counterparty group shall not exceed 30% of eligible capital.',
+      'A related party transaction exceeding the materiality threshold set under this policy, or any write-off of exposure to a related party, requires the approval of a simple majority of the Board (i.e. more than half of directors present and voting).',
     redline:
-      'Aggregate exposure to a single counterparty group shall not exceed [-30%-] {+25%+} of eligible capital{+, measured on a look-through basis to connected parties+}.',
+      'A related party transaction exceeding the materiality threshold set under this policy, or any write-off of exposure to a related party, requires the approval of [-a simple majority of the Board (i.e. more than half of directors present and voting)-] {+not less than two-thirds of the Board of directors, with any director having an interest in the transaction abstaining from the deliberation and vote+}.',
+  },
+  {
+    docName: 'Related Party Transaction (RPT) Approval Policy',
+    section: 'Section 3 — Materiality Thresholds',
+    original:
+      'Materiality thresholds for each related party group are reviewed by Risk & Compliance and endorsed by the Chief Risk Officer as needed.',
+    redline:
+      'Materiality thresholds for each related party group are reviewed by Risk & Compliance and endorsed by the [-Chief Risk Officer as needed-] {+Board at least annually. A transaction is material where its value exceeds the lower of S$5 million or 5% of the Bank’s latest audited capital funds+}.',
+  },
+  {
+    docName: 'Related Party Transaction (RPT) Approval Policy',
+    section: 'Section 4 — Identification of Related Parties',
+    original:
+      'Directors, executive officers and key credit approvers are required to disclose potential conflicts of interest to the Board upon appointment and whenever a material change occurs.',
+    redline:
+      'Directors, executive officers and key credit approvers are required to disclose potential conflicts of interest to the Board upon appointment[-and whenever a material change occurs-] {+, whenever a material change occurs, and in any event no less than annually. Disclosures shall extend to entities in which the individual, or a connected party, holds a controlling interest of 20% or more+}.',
+  },
+  {
+    docName: 'Related Party Transaction (RPT) Approval Policy',
+    section: 'Section 5 — Reporting to MAS',
+    original:
+      'A summary of related party transactions is submitted to the Board on a quarterly basis.',
+    redline:
+      'A summary of related party transactions is submitted to the Board [-on a quarterly basis-] {+on a quarterly basis and lodged with the Monetary Authority of Singapore within 14 days of Board approval, in the form prescribed under MAS Notice 643+}.',
   },
   {
     docName: 'Credit Risk Management Framework',
-    section: 'Section 7 — Large exposure reporting',
+    section: 'Section 7 — Related party exposure limits',
     original:
-      'Large exposures are reported to the risk committee on a quarterly basis.',
+      'Aggregate credit exposure to all related parties shall not exceed 25% of capital funds.',
     redline:
-      'Large exposures are reported to the risk committee on a [-quarterly-] {+monthly+} basis{+, with breaches escalated within 2 business days+}.',
+      'Aggregate credit exposure to all related parties shall not exceed [-25%-] {+50% of capital funds, with exposure to any single related party group not exceeding 25%+} of capital funds{+, measured on a look-through basis to connected counterparties+}.',
   },
   {
-    docName: 'AML/CFT Procedures Manual',
-    section: 'Clause 12 — Suspicious transaction reporting',
+    docName: 'Board Governance & Conflicts of Interest Charter',
+    section: 'Clause 6 — Abstention from voting',
     original:
-      'Suspicious transactions must be reported to the MLRO within five business days.',
+      'An interested director may remain present during discussion of a related party transaction but shall not vote on it.',
     redline:
-      'Suspicious transactions must be reported to the MLRO within [-five-] {+two+} business days.',
+      'An interested director [-may remain present during discussion of a related party transaction but shall not vote on it-] {+shall recuse themselves from both the deliberation and the vote on the related party transaction, and shall not be counted towards the quorum for that item+}.',
   },
   {
-    docName: 'Vendor Data Processing Agreement',
-    section: 'Clause 8 — Data retention & breach notification',
+    docName: 'Regulatory Reporting Procedures Manual',
+    section: 'Item 9 — MAS Notice 643 returns',
     original:
-      'The Vendor shall retain processing logs for thirty-six (36) months and notify the Company of any material breach within seventy-two (72) hours.',
+      'Related party transaction returns are prepared annually for management review.',
     redline:
-      'The Vendor shall retain processing logs for [-thirty-six (36)-] {+eighty-four (84)+} months and notify the Company of any material breach within [-seventy-two (72)-] {+twenty-four (24)+} hours.',
-  },
-  {
-    docName: 'Capital Adequacy Internal Guideline',
-    section: 'Section 3 — Group capital framework',
-    original:
-      'Designated financial holding companies maintain a minimum total capital ratio of 10%.',
-    redline:
-      'Designated financial holding companies maintain a minimum total capital ratio of [-10%-] {+12%+}{+, inclusive of a capital conservation buffer+}.',
-  },
-  {
-    docName: 'Misconduct Reporting SOP',
-    section: 'Clause 5 — Reporting channels',
-    original:
-      'Misconduct is reported through the legacy incident portal.',
-    redline:
-      'Misconduct is reported through the [-legacy incident portal-] {+centralised MAS-aligned reporting system+}{+, effective 1 January 2027+}.',
-  },
-  {
-    docName: 'Payment Services Compliance Checklist',
-    section: 'Item 9 — Stablecoin issuance controls',
-    original:
-      'Stablecoin reserves are reviewed annually by an external auditor.',
-    redline:
-      'Stablecoin reserves are reviewed [-annually-] {+monthly+} by an external auditor{+ and attested to MAS+}.',
+      'Related party transaction returns are prepared [-annually for management review-] {+quarterly and submitted to MAS in accordance with MAS Notice 643, with material transactions reported within 14 days of approval+}.',
   },
 ]
 
