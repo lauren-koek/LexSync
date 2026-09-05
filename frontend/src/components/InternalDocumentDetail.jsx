@@ -8,6 +8,7 @@ export default function InternalDocumentDetail({ documentId, onBack, onDeleted }
   const [document, setDocument] = useState(null)
   const [pdfUrl, setPdfUrl] = useState('')
   const [filter, setFilter] = useState('')
+  const [activeView, setActiveView] = useState('document')
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
 
@@ -46,19 +47,26 @@ export default function InternalDocumentDetail({ documentId, onBack, onDeleted }
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <button onClick={onBack} className="inline-flex items-center gap-1 text-sm font-medium text-accent-deep"><ArrowLeft size={15} /> Back to documents</button>
+        <div className="flex rounded-lg border border-border bg-panel p-0.5" aria-label="Document detail view">
+          {['document', 'analysis'].map(view => <button
+            key={view}
+            type="button"
+            aria-pressed={activeView === view}
+            onClick={() => setActiveView(view)}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors ${activeView === view ? 'bg-white text-ink shadow-sm' : 'text-muted hover:text-ink'}`}
+          >{view[0].toUpperCase() + view.slice(1)}</button>)}
+        </div>
         <div className="ml-auto flex gap-2">
           <Button size="sm" variant="secondary" disabled={busy} onClick={reanalyze}><RefreshCw size={14} /> Re-run analysis</Button>
           <Button size="sm" variant="secondary" disabled={busy} onClick={remove}><Trash2 size={14} /> Delete</Button>
         </div>
       </div>
       {error && <div role="alert" className="decision-red rounded-lg px-4 py-2 text-sm">{error}</div>}
-      <div className="internal-detail-grid min-h-0 flex-1">
-        <section className="overflow-hidden rounded-lg border border-border bg-card">
-          {pdfUrl ? <iframe title={`${document.title} PDF`} src={pdfUrl} className="h-full min-h-[32rem] w-full" /> : <p className="p-6 text-muted">PDF preview unavailable.</p>}
-        </section>
-        <section className="overflow-y-auto rounded-lg border border-border bg-panel p-5">
+      {activeView === 'document' ? <section className="min-h-0 flex-1 overflow-hidden rounded-lg border border-border bg-card">
+        {pdfUrl ? <iframe title={`${document.title} PDF`} src={pdfUrl} className="h-full min-h-[calc(100vh-10rem)] w-full" /> : <p className="p-6 text-muted">PDF preview unavailable.</p>}
+      </section> : <section className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border bg-panel p-5">
           <p className="eyebrow">Internal document</p>
           <h1 className="mt-1 text-xl">{document.title}</h1>
           <p className="mt-1 text-sm text-muted">{document.filename} · {document.chunk_count} clauses</p>
@@ -68,8 +76,7 @@ export default function InternalDocumentDetail({ documentId, onBack, onDeleted }
           </div>
           <h2 className="mb-3 mt-6 text-sm">Suggested changes ({document.suggestions.length})</h2>
           <div className="space-y-3">{document.suggestions.map(item => <SuggestionCard key={item.id} suggestion={item} />)}</div>
-        </section>
-      </div>
+      </section>}
     </div>
   )
 }

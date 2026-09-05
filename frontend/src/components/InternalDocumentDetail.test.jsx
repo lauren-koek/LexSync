@@ -4,7 +4,7 @@ import InternalDocumentDetail from './InternalDocumentDetail.jsx'
 
 afterEach(() => vi.restoreAllMocks())
 
-test('shows the PDF beside extracted clauses and suggestions', async () => {
+test('shows the PDF full-width by default and switches to analysis', async () => {
   vi.spyOn(globalThis, 'fetch')
     .mockResolvedValueOnce({ ok: true, json: async () => ({
       id: 'doc-1', title: 'Policy', filename: 'policy.pdf', size_bytes: 100,
@@ -24,6 +24,12 @@ test('shows the PDF beside extracted clauses and suggestions', async () => {
   render(<InternalDocumentDetail documentId="doc-1" onBack={vi.fn()} onDeleted={vi.fn()} />)
 
   expect(await screen.findByTitle('Policy PDF')).toHaveAttribute('src', 'https://signed.example/policy.pdf')
+  expect(screen.getByRole('button', { name: 'Document' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.queryByText('Clause 1')).not.toBeInTheDocument()
+
+  fireEvent.click(screen.getByRole('button', { name: 'Analysis' }))
+
+  expect(screen.queryByTitle('Policy PDF')).not.toBeInTheDocument()
   expect(screen.getByText('Clause 1')).toBeInTheDocument()
   expect(screen.getByText('Retention changed.')).toBeInTheDocument()
   expect(screen.getByText('three years')).toBeInTheDocument()
