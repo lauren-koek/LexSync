@@ -1,0 +1,54 @@
+#!/bin/sh
+set -e
+
+# Wait for PostgreSQL to be ready before starting.
+# Railway injects DATABASE_URL from the linked Postgres service.
+echo "Waiting for PostgreSQL..."
+until python - <<'EOF'
+import os, sys
+try:
+    import sqlalchemy
+    engine = sqlalchemy.create_engine(os.environ["DATABASE_URL"])
+    with engine.connect():
+        pass
+    print("PostgreSQL is ready.")
+except Exception as e:
+    print(f"Not ready: {e}", file=sys.stderr)
+    sys.exit(1)
+EOF
+do
+  sleep 3
+done
+
+# Create tables if they don't exist.
+python - <<'EOF'
+from db import create_tables
+create_tables()
+print("Tables ready.")
+EOF
+
+# Run the pipeline on a schedule.
+# PIPELINE_INTERVAL_HOURS controls how often it runs (default: 24).
+python - <<'EOF'
+import os, time, subprocess, sys
+
+interval = int(os.environ.get("PIPELINE_INTERVAL_HOURS", "24")) * 3600
+days = int(os.environ.get("SCRAPER_DAYS", "7"))
+
+while True:
+    print("Starting pipeline run...", flush=True)
+    # Step 1: scrape
+    result = subprocess.run(
+        ["python", "scraper/src/mas_regulations_scraper.py",
+         "--days", str(days), "--download-pdfs"],
+        cwd="/app",
+    )
+    if result.returncode != 0:
+        print("Scraper failed, skipping pipeline step.", file=sys.stderr, flush=True)
+    else:
+        # Step 2: OCR + LLM + DB
+        subprocess.run(["python", "pipeline.py"], cwd="/app")
+
+    print(f"Run complete. Next run in {interval // 3600}h.", flush=True)
+    time.sleep(interval)
+EOF

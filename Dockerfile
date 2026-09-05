@@ -20,4 +20,6 @@ RUN playwright install chromium --with-deps
 # Copy the full project
 COPY . .
 
-CMD ["python", "pipeline.py"]
+RUN chmod +x /app/entrypoint.sh
+
+CMD ["/app/entrypoint.sh"]
