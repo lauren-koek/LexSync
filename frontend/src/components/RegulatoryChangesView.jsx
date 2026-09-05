@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import Badge from './ui/Badge.jsx'
 import AffectedDocumentsView from './AffectedDocumentsView.jsx'
 import { IMPACT_META, impactLevel } from '../lib/impact.js'
+import { mockSuggestionsFor } from '../lib/mockAffected.js'
 import PageIntro from './ui/PageIntro.jsx'
 
 function uniqueValues(docs, key) {
@@ -114,7 +115,9 @@ export default function RegulatoryChangesView({ documents }) {
             )}
             {rows.map(doc => {
               const level = impactLevel(doc)
-              const affected = doc.suggestion_count || 0
+              // Fall back to the mock suggestion count when the backend has none,
+              // to stay consistent with the affected-documents detail view.
+              const affected = doc.suggestion_count || mockSuggestionsFor(doc).length
               return (
                 <tr
                   key={doc.id || doc.source_url}
