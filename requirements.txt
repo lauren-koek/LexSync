@@ -8,7 +8,10 @@ pdfplumber
 python-dotenv
 sqlalchemy
 psycopg2-binary
+pgvector
 rich
+fastembed
+qdrant-client
 pydantic
 instructor
 openai
