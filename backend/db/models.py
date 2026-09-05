@@ -37,3 +37,5 @@ class Document(Base):
     updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), onupdate=func.now()
     )
+
+## class InternalDocument(Base): with embeddings 
