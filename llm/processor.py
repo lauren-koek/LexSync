@@ -77,7 +77,7 @@ def process_document(doc: dict, ocr_text: str) -> ProcessedDoc:
             llm_categories=categories,
             llm_impact_check=impact_check,
         )
-    except (json.JSONDecodeError, KeyError, TypeError):
+    except (json.JSONDecodeError, AttributeError, KeyError, TypeError, ValueError):
         logger.warning("Failed to parse LLM JSON response for document: %s", title or url)
         return ProcessedDoc(
             llm_summary=raw,
