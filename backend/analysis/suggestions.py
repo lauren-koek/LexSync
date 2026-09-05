@@ -111,8 +111,12 @@ def analyze_regulatory_document(
             "legal_reasoning": result.legal_reasoning,
             "proposed_amended_clause": result.proposed_amended_clause,
             "statutory_citations": result.statutory_citations,
-            "redline_diff": analyse.generate_redline_diff(
-                match["content"], result.proposed_amended_clause
+            "redline_diff": (
+                analyse.generate_redline_diff(
+                    match["content"], result.proposed_amended_clause
+                )
+                if result.proposed_amended_clause
+                else ""
             ),
             "analysis_source": (
                 "llm" if analyse._get_instructor_client() is not None else "offline_heuristic"
@@ -189,12 +193,31 @@ def _legal_terms(text: str) -> set[str]:
     }
 
 
+def _document_notice_identity(document: Document) -> set[str]:
+    """Notice references that identify the document itself (title or header line).
+
+    A clause buried in the body that merely cross-references another notice must
+    not make the document look like that notice, otherwise unrelated documents get
+    dragged into clause-by-clause analysis.
+    """
+    lines = (document.ocr_text or "").strip().splitlines()
+    header = lines[0] if lines else ""
+    return _notice_references(f"{document.title or ''}\n{header}")
+
+
 def _direct_notice_matcher(
     internal: InternalDocument,
     regulation_chunks: list[dict],
     candidates_per_clause: int = 2,
 ) -> Callable[[dict], list[dict]]:
     """Rank cited-notice clauses locally, without loading an embedding model."""
+    # Headings/preambles ("General") carry no numbered obligation; skip them so we
+    # only spend analysis calls on substantive clauses.
+    substantive = [
+        regulation for regulation in regulation_chunks
+        if regulation["clause_reference"] != "General"
+    ]
+    regulation_chunks = substantive or regulation_chunks
     matches_by_content: dict[str, list[dict]] = {}
     for internal_chunk in internal.chunks:
         asset_terms = _legal_terms(internal_chunk.content)
@@ -274,10 +297,36 @@ def _save_document_gaps(
     return changed
 
 
+def _localize_suggestions(internal_document_id: UUID, session: Session) -> int:
+    """Collapse to a single localised change per internal clause.
+
+    A clause can match many regulation clauses across several notices; surfacing
+    one suggestion per match buries the reviewer. Keep only the most impactful
+    pending suggestion for each internal chunk and drop the rest.
+    """
+    pending = session.query(DocumentSuggestion).filter_by(
+        internal_document_id=internal_document_id, status="pending"
+    ).all()
+    best: dict[UUID, DocumentSuggestion] = {}
+    for suggestion in pending:
+        chosen = best.get(suggestion.internal_chunk_id)
+        if chosen is None or (
+            (suggestion.impact_score, suggestion.similarity_score)
+            > (chosen.impact_score, chosen.similarity_score)
+        ):
+            best[suggestion.internal_chunk_id] = suggestion
+    kept = {id(suggestion) for suggestion in best.values()}
+    for suggestion in pending:
+        if id(suggestion) not in kept:
+            session.delete(suggestion)
+    session.flush()
+    return len(best)
+
+
 def reanalyze_internal_document(
     document_id: UUID,
     session: Session,
-    analyze: Callable[[str, str], LegalImpactAnalysis] = analyse.analyze_clause_impact,
+    analyze: Callable[[str, str], LegalImpactAnalysis] = analyse.assess_clause_compliance,
 ) -> dict[str, int]:
     internal = session.get(InternalDocument, document_id)
     if internal is None:
@@ -289,20 +338,19 @@ def reanalyze_internal_document(
         chunk.review_reason = "No conflicting or missing regulatory requirement was identified."
         chunk.last_reviewed_at = checked_at
 
-    total = 0
     documents = session.query(Document).filter(Document.ocr_text.is_not(None)).all()
     asset_text = "\n\n".join(chunk.content for chunk in internal.chunks)
     references = _notice_references(asset_text)
     cited_documents = [
         document for document in documents
-        if references & _notice_references(f"{document.title or ''}\n{document.ocr_text or ''}")
+        if references & _document_notice_identity(document)
     ]
     if references and cited_documents:
         for document in cited_documents:
             regulation_chunks = ingest.chunk_legal_document(
                 document.ocr_text or "", "REGULATION", str(document.id)
             )
-            total += analyze_regulatory_document(
+            analyze_regulatory_document(
                 document.id,
                 session,
                 analyze=analyze,
@@ -310,18 +358,19 @@ def reanalyze_internal_document(
                 find_matches=_direct_notice_matcher(internal, regulation_chunks),
                 analysis_workers=4,
             )
-            total += _save_document_gaps(document, internal, session)
+            _save_document_gaps(document, internal, session)
     else:
         for document in documents:
-            total += analyze_regulatory_document(
+            analyze_regulatory_document(
                 document.id, session, analyze=analyze, internal_document_id=document_id
             )
-            total += _save_document_gaps(document, internal, session)
+            _save_document_gaps(document, internal, session)
+    suggestion_count = _localize_suggestions(document_id, session)
     outdated = sum(chunk.review_status == "outdated" for chunk in internal.chunks)
     internal.status = "outdated" if outdated else "current"
     session.flush()
     return {
-        "suggestion_count": total,
+        "suggestion_count": suggestion_count,
         "checked_clause_count": len(internal.chunks),
         "outdated_clause_count": outdated,
     }

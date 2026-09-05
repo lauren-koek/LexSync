@@ -45,6 +45,20 @@ class LegalImpactAnalysis(BaseModel):
     statutory_citations: list[str] = Field(description="List of relevant statutory sections cited.")
 
 
+class ClauseComplianceAssessment(BaseModel):
+    """Lightweight verdict used when flagging outdated internal clauses.
+
+    Deliberately omits a rewritten clause: generating a full replacement is where
+    the model tends to hallucinate. We only ask it to decide whether the clause is
+    outdated and explain why, briefly.
+    """
+
+    is_affected: bool = Field(description="True if the regulation contradicts or supersedes the internal clause.")
+    impact_score: int = Field(ge=1, le=10, description="Severity of non-compliance from 1 (minor) to 10 (critical).")
+    legal_reasoning: str = Field(description="One or two sentences naming the specific conflict with the regulation. Do not rewrite the clause.")
+    statutory_citations: list[str] = Field(description="Relevant statutory sections cited.")
+
+
 class MissingObligation(BaseModel):
     impact_score: int = Field(ge=1, le=10)
     legal_reasoning: str
@@ -112,6 +126,52 @@ def analyze_clause_impact(regulation: str, asset: str) -> LegalImpactAnalysis:
             pass  # fall through to mock
 
     return _mock_analysis(regulation, asset)
+
+
+def assess_clause_compliance(regulation: str, asset: str) -> LegalImpactAnalysis:
+    """Flag whether an internal clause is outdated and explain why — no rewrite.
+
+    Used by the internal-document reanalysis flow. Returns a LegalImpactAnalysis
+    with an empty ``proposed_amended_clause`` so downstream code stores the verdict
+    and reasoning without a fabricated replacement or redline.
+    """
+    client = _get_instructor_client()
+    if client is not None:
+        try:
+            verdict = client.chat.completions.create(
+                model=OPENROUTER_MODEL,
+                response_model=ClauseComplianceAssessment,
+                max_retries=2,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a senior legal compliance analyst. Decide whether the "
+                            "internal clause is now outdated because the regulatory clause "
+                            "contradicts or supersedes it. In one or two sentences, state the "
+                            "specific conflict and cite the regulation. Do NOT rewrite the "
+                            "clause or draft replacement wording."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": f"REGULATION:\n{regulation}\n\nINTERNAL ASSET CLAUSE:\n{asset}",
+                    },
+                ],
+            )
+            return LegalImpactAnalysis(
+                is_affected=verdict.is_affected,
+                impact_score=verdict.impact_score,
+                legal_reasoning=verdict.legal_reasoning,
+                proposed_amended_clause="",
+                statutory_citations=verdict.statutory_citations,
+            )
+        except Exception:
+            pass  # fall through to mock
+
+    heuristic = _mock_analysis(regulation, asset)
+    heuristic.proposed_amended_clause = ""
+    return heuristic
 
 
 def analyze_document_gaps(

@@ -185,6 +185,91 @@ def test_reanalysis_marks_every_clause_current_or_outdated(session, records, mon
     assert internal.status == "outdated"
 
 
+def test_reanalysis_keeps_one_localised_suggestion_per_clause(session, records, monkeypatch):
+    regulation, internal, outdated_chunk = records
+    regulation.ocr_text = (
+        "Section 1. Report incidents within one day.\n"
+        "Section 2. Report incidents within twelve hours.\n"
+        "Section 3. Report incidents immediately."
+    )
+    monkeypatch.setattr(suggestions, "_rechunk_legacy_document", lambda *args: None)
+    monkeypatch.setattr(suggestions, "_save_document_gaps", lambda *_: 0)
+    monkeypatch.setattr(
+        suggestions,
+        "find_impacted_assets",
+        lambda *args, **kwargs: [{
+            "internal_document_id": str(internal.id),
+            "internal_chunk_id": str(outdated_chunk.id),
+            "similarity_score": 0.9,
+            "content": outdated_chunk.content,
+            "clause_reference": outdated_chunk.clause_reference,
+        }],
+    )
+
+    scores = iter([4, 9, 6])
+
+    def analyze(regulation_text, _asset_text):
+        return LegalImpactAnalysis(
+            is_affected=True,
+            impact_score=next(scores),
+            legal_reasoning="Reporting period conflicts.",
+            proposed_amended_clause=regulation_text,
+            statutory_citations=[],
+        )
+
+    result = suggestions.reanalyze_internal_document(internal.id, session, analyze=analyze)
+
+    saved = session.query(DocumentSuggestion).all()
+    assert len(saved) == 1
+    assert saved[0].internal_chunk_id == outdated_chunk.id
+    assert saved[0].impact_score == 9
+    assert result["outdated_clause_count"] == 1
+
+
+def test_assess_clause_compliance_flags_without_rewriting():
+    result = suggestions.analyse.assess_clause_compliance(
+        "MAS Notice 643\n26 A bank must obtain a special majority of three-fourths of its board.",
+        "Clause 2. Approval requires a simple majority of the Board.",
+    )
+    assert result.is_affected is True
+    assert result.proposed_amended_clause == ""
+    assert "three-fourths" in result.legal_reasoning
+
+
+def test_reanalysis_records_reason_without_redline(session, records, monkeypatch):
+    regulation, internal, outdated_chunk = records
+    monkeypatch.setattr(suggestions, "_rechunk_legacy_document", lambda *args: None)
+    monkeypatch.setattr(suggestions, "_save_document_gaps", lambda *_: 0)
+    monkeypatch.setattr(
+        suggestions,
+        "find_impacted_assets",
+        lambda *args, **kwargs: [{
+            "internal_document_id": str(internal.id),
+            "internal_chunk_id": str(outdated_chunk.id),
+            "similarity_score": 0.9,
+            "content": outdated_chunk.content,
+            "clause_reference": outdated_chunk.clause_reference,
+        }],
+    )
+
+    def analyze(_regulation, _asset):
+        return LegalImpactAnalysis(
+            is_affected=True,
+            impact_score=8,
+            legal_reasoning="Reporting window conflicts with Section 1.",
+            proposed_amended_clause="",
+            statutory_citations=["Section 1"],
+        )
+
+    suggestions.reanalyze_internal_document(internal.id, session, analyze=analyze)
+
+    saved = session.query(DocumentSuggestion).one()
+    assert saved.redline_diff == ""
+    assert saved.proposed_amended_clause == ""
+    assert saved.legal_reasoning == "Reporting window conflicts with Section 1."
+    assert saved.statutory_citations == ["Section 1"]
+
+
 def test_offline_analysis_detects_notice_643_majority_and_reporting_gaps():
     majority = suggestions.analyse._mock_analysis(
         "Paragraph 26 requires approval of a special majority of three-fourths of its board.",
@@ -238,10 +323,13 @@ def test_cited_notice_fast_path_bypasses_vector_search(session, records, monkeyp
     )
     chunk.content += " Regulatory basis: MAS Notice 643."
     unrelated = Document(
-        source_url="https://mas.example/notice-999",
-        title="Notice 999 Unrelated Requirements",
+        source_url="https://mas.example/notice-643a",
+        title="Notice 643A Exposures to Related Concerns",
         tags=[], applies_to=[], related_items=[],
-        ocr_text="MAS Notice 999\n1 Firms must submit an annual return.",
+        ocr_text=(
+            "MAS Notice 643A\n1 Firms must submit an annual return. "
+            "This document cross-references MAS Notice 643."
+        ),
     )
     session.add(unrelated)
     session.flush()
@@ -266,6 +354,6 @@ def test_cited_notice_fast_path_bypasses_vector_search(session, records, monkeyp
     result = suggestions.reanalyze_internal_document(internal.id, session, analyze=analyze)
 
     assert result["checked_clause_count"] == 1
-    assert observed_regulation_text
+    assert len(observed_regulation_text) == 1
     assert any("three-fourths" in text for text in observed_regulation_text)
     assert all("annual return" not in text for text in observed_regulation_text)
