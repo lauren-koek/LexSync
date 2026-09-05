@@ -1,0 +1,10 @@
+playwright
+beautifulsoup4
+requests
+pytesseract
+pillow
+pdf2image
+pdfplumber
+python-dotenv
+sqlalchemy
+psycopg2-binary
