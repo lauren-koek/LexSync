@@ -1,5 +1,5 @@
 # Build the frontend (Vite/React) in a Node stage.
-FROM node:20-slim AS frontend-build
+FROM node:22-slim AS frontend-build
 WORKDIR /frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
@@ -29,7 +29,8 @@ RUN playwright install chromium --with-deps
 COPY . .
 
 # Copy the compiled frontend from the Node build stage. FastAPI serves it
-# as static files from frontend/dist (see backend/main.py).
+# as static files from frontend/dist (see backend/main.py). Must come after
+# `COPY . .` so it isn't overwritten by the local tree (which has no dist).
 COPY --from=frontend-build /frontend/dist ./frontend/dist
 
 RUN chmod +x /app/entrypoint.sh
