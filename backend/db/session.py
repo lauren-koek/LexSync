@@ -3,7 +3,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from backend.db.models import Base
@@ -32,4 +32,10 @@ def get_session() -> Generator[Session]:
 
 
 def create_tables() -> None:
+    # The InternalDocumentChunk table uses pgvector's `vector` column type and
+    # an HNSW index, both of which require the extension to already exist. It
+    # must be created before create_all() builds the table — migrations run too
+    # late (after create_tables) to cover this.
+    with engine.begin() as connection:
+        connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
     Base.metadata.create_all(engine)
