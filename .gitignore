@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+.DS_Store
+.worktrees/
+.superpowers
+
+# Scraper outputs
+scraper/output/*.json
+scraper/output/pdfs/*
+!scraper/output/pdfs/.gitkeep
+scraper/output/ocr/*
+!scraper/output/ocr/.gitkeep

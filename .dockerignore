@@ -1,0 +1,11 @@
+.env
+.git
+.worktrees
+.superpowers
+__pycache__
+*.pyc
+*.pyo
+scraper/output/pdfs/
+scraper/output/ocr/
+scraper/output/*.json
+.DS_Store
