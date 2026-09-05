@@ -8,7 +8,7 @@ export default function Redline({ value }) {
           return (
             <del
               key={index}
-              className="bg-decision-red-bg text-decision-red no-underline line-through"
+              className="bg-decision-red-bg text-decision-red line-through"
             >
               {part.slice(2, -2)}
             </del>

@@ -13,7 +13,7 @@ const INTERNAL_DOCS = [
     original:
       'A related party transaction exceeding the materiality threshold set under this policy, or any write-off of exposure to a related party, requires the approval of a simple majority of the Board (i.e. more than half of directors present and voting).',
     redline:
-      'A related party transaction exceeding the materiality threshold set under this policy, or any write-off of exposure to a related party, requires the approval of [-a simple majority of the Board (i.e. more than half of directors present and voting)-] {+not less than two-thirds of the Board of directors, with any director having an interest in the transaction abstaining from the deliberation and vote+}.',
+      'A related party transaction exceeding the materiality threshold set under this policy, or any write-off of exposure to a related party, requires the approval of a [-simple majority of the Board (i.e. more than half of directors present and voting)-] {+special majority of three-fourths of the Board of directors, determined by reference to the total number of directors on the Board and excluding any director required to abstain from voting+}.',
   },
   {
     docName: 'Related Party Transaction (RPT) Approval Policy',
@@ -21,7 +21,7 @@ const INTERNAL_DOCS = [
     original:
       'Materiality thresholds for each related party group are reviewed by Risk & Compliance and endorsed by the Chief Risk Officer as needed.',
     redline:
-      'Materiality thresholds for each related party group are reviewed by Risk & Compliance and endorsed by the [-Chief Risk Officer as needed-] {+Board at least annually. A transaction is material where its value exceeds the lower of S$5 million or 5% of the Bank’s latest audited capital funds+}.',
+      'Materiality thresholds are [-for each related party group reviewed by Risk & Compliance and endorsed by the Chief Risk Officer as needed-] {+set separately for exposures to each related party group and for each type of non-exposure transaction, taking into account the nature, scope, frequency, value of and risks associated with those transactions, and are endorsed by the Board+}.',
   },
   {
     docName: 'Related Party Transaction (RPT) Approval Policy',
@@ -29,39 +29,39 @@ const INTERNAL_DOCS = [
     original:
       'Directors, executive officers and key credit approvers are required to disclose potential conflicts of interest to the Board upon appointment and whenever a material change occurs.',
     redline:
-      'Directors, executive officers and key credit approvers are required to disclose potential conflicts of interest to the Board upon appointment[-and whenever a material change occurs-] {+, whenever a material change occurs, and in any event no less than annually. Disclosures shall extend to entities in which the individual, or a connected party, holds a controlling interest of 20% or more+}.',
+      '[-Directors, executive officers and key credit approvers-] {+Persons in the Bank’s director group, key credit approver group, senior management group, substantial shareholder group, major stake entity group and related corporation group+} are required to disclose potential conflicts of interest to the Board upon appointment and whenever a material change occurs.',
   },
   {
     docName: 'Related Party Transaction (RPT) Approval Policy',
-    section: 'Section 5 — Reporting to MAS',
+    section: 'Section 5 — Scope of Approval',
     original:
-      'A summary of related party transactions is submitted to the Board on a quarterly basis.',
+      'Where a related party transaction is approved, the approval covers the principal terms of the transaction.',
     redline:
-      'A summary of related party transactions is submitted to the Board [-on a quarterly basis-] {+on a quarterly basis and lodged with the Monetary Authority of Singapore within 14 days of Board approval, in the form prescribed under MAS Notice 643+}.',
+      'Where a related party transaction is approved, the approval covers [-the principal terms-] {+all the terms and conditions+} of the transaction.',
   },
   {
     docName: 'Credit Risk Management Framework',
-    section: 'Section 7 — Related party exposure limits',
+    section: 'Section 7 — Related party exposure monitoring',
     original:
-      'Aggregate credit exposure to all related parties shall not exceed 25% of capital funds.',
+      'Exposures to related parties are monitored by the credit team and reviewed periodically.',
     redline:
-      'Aggregate credit exposure to all related parties shall not exceed [-25%-] {+50% of capital funds, with exposure to any single related party group not exceeding 25%+} of capital funds{+, measured on a look-through basis to connected counterparties+}.',
+      'Exposures to related parties are [-monitored by the credit team and reviewed periodically-] {+aggregated by related party group and monitored against the materiality thresholds set by the Board, with any transaction exceeding a threshold escalated for three-fourths special-majority Board approval before it is entered into+}.',
   },
   {
     docName: 'Board Governance & Conflicts of Interest Charter',
     section: 'Clause 6 — Abstention from voting',
     original:
-      'An interested director may remain present during discussion of a related party transaction but shall not vote on it.',
+      'A director with an interest in a related party transaction shall not vote on that transaction.',
     redline:
-      'An interested director [-may remain present during discussion of a related party transaction but shall not vote on it-] {+shall recuse themselves from both the deliberation and the vote on the related party transaction, and shall not be counted towards the quorum for that item+}.',
+      'A director with an interest in a related party transaction shall [-not vote on that transaction-] {+abstain from voting on that transaction and be excluded from the total number of directors used to determine the three-fourths special majority required for approval+}.',
   },
   {
     docName: 'Regulatory Reporting Procedures Manual',
-    section: 'Item 9 — MAS Notice 643 returns',
+    section: 'Item 9 — Related party transaction register',
     original:
-      'Related party transaction returns are prepared annually for management review.',
+      'A summary of related party transactions is filed annually for internal record-keeping.',
     redline:
-      'Related party transaction returns are prepared [-annually for management review-] {+quarterly and submitted to MAS in accordance with MAS Notice 643, with material transactions reported within 14 days of approval+}.',
+      'A [-summary of related party transactions is filed annually for internal record-keeping-] {+register of related party transactions is maintained, recording the approval obtained and the identity of any director who abstained from voting, and is reported to the Board each quarter+}.',
   },
 ]
 
