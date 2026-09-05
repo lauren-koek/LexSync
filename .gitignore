@@ -1,6 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
 .env
 .DS_Store
 .worktrees/
+.superpowers
 
 # Scraper outputs
 scraper/output/*.json
