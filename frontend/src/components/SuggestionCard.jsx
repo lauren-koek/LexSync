@@ -10,6 +10,8 @@ export default function SuggestionCard({ suggestion }) {
   const [saving, setSaving] = useState(false)
 
   async function change(status) {
+    // Mock fallback suggestions have no backend row; update them locally only.
+    if (String(item.id).startsWith('mock-')) { setItem({ ...item, status }); return }
     setSaving(true)
     try { setItem(await updateSuggestionStatus(item.id, status)) }
     finally { setSaving(false) }

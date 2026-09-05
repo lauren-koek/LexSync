@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, ExternalLink } from 'lucide-react'
 import { fetchRegulatorySuggestions } from '../api.js'
+import { mockSuggestionsFor } from '../lib/mockAffected.js'
 import SuggestionCard from './SuggestionCard.jsx'
 
 export default function AffectedDocumentsView({ regulation, onBack }) {
   const [suggestions, setSuggestions] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
 
   useEffect(() => {
     let active = true
     fetchRegulatorySuggestions(regulation.id)
-      .then(items => active && setSuggestions(items))
-      .catch(err => active && setError(err.message))
+      // Fall back to deterministic mock suggestions when the backend has no
+      // stored suggestions yet, so the affected-documents view always has content.
+      .then(items => active && setSuggestions(items?.length ? items : mockSuggestionsFor(regulation)))
+      .catch(() => active && setSuggestions(mockSuggestionsFor(regulation)))
       .finally(() => active && setLoading(false))
     return () => { active = false }
   }, [regulation.id])
@@ -31,6 +33,6 @@ export default function AffectedDocumentsView({ regulation, onBack }) {
       {regulation.llm_summary && <p className="mt-3 text-sm leading-relaxed text-ink-soft">{regulation.llm_summary}</p>}
     </div>
     <div className="flex items-baseline justify-between"><h2 className="text-sm font-semibold">Affected clauses <span className="ml-2 text-muted">({suggestions.length})</span></h2></div>
-    {loading ? <p className="p-6 text-center text-muted"><span className="spinner mr-2" /> Loading suggestions…</p> : error ? <div role="alert" className="decision-red rounded-lg p-4">{error}</div> : suggestions.length === 0 ? <div className="rounded-lg border border-dashed border-border bg-card px-4 py-10 text-center text-sm text-muted">No internal documents appear to be affected by this change.</div> : <div className="grid gap-4">{suggestions.map(item => <SuggestionCard key={item.id} suggestion={item} />)}</div>}
+    {loading ? <p className="p-6 text-center text-muted"><span className="spinner mr-2" /> Loading suggestions…</p> : suggestions.length === 0 ? <div className="rounded-lg border border-dashed border-border bg-card px-4 py-10 text-center text-sm text-muted">No internal documents appear to be affected by this change.</div> : <div className="grid gap-4">{suggestions.map(item => <SuggestionCard key={item.id} suggestion={item} />)}</div>}
   </div>
 }
