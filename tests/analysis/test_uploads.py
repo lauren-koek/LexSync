@@ -1,4 +1,5 @@
 from io import BytesIO
+from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException, UploadFile
@@ -30,6 +31,22 @@ def test_extract_upload_delegates_pdf_to_ingest(monkeypatch):
 
     assert uploads.extract_upload(upload) == "Extracted PDF text"
     assert observed["content"] == b"%PDF-test"
+
+
+def test_extract_pdf_supports_pdfminer_documents_without_is_encrypted(monkeypatch):
+    class ParsedPdf:
+        doc = SimpleNamespace(is_extractable=True)
+        pages = [SimpleNamespace(extract_text=lambda: "Clause 1. Keep records.")]
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+    monkeypatch.setattr(uploads.pdfplumber, "open", lambda _: ParsedPdf())
+
+    assert uploads.extract_pdf_bytes(b"%PDF-valid") == "Clause 1. Keep records."
 
 
 @pytest.mark.parametrize("filename", ["notes.docx", "regulation.exe"])

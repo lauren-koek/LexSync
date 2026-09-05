@@ -20,8 +20,6 @@ def extract_pdf_bytes(content: bytes) -> str:
     """Strictly extract text from PDF bytes for durable ingestion."""
     try:
         with pdfplumber.open(BytesIO(content)) as pdf:
-            if pdf.doc.is_encrypted:
-                raise PDFExtractionError("Encrypted PDFs are not supported")
             text = "\n".join(page.extract_text() or "" for page in pdf.pages)
     except PDFExtractionError:
         raise

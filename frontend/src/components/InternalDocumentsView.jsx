@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { FileText, Search, Upload } from 'lucide-react'
 import useInternalDocuments from '../hooks/useInternalDocuments.js'
 import Button from './ui/Button.jsx'
@@ -19,6 +19,7 @@ export default function InternalDocumentsView() {
   const [query, setQuery] = useState('')
   const [uploading, setUploading] = useState(false)
   const [notice, setNotice] = useState('')
+  const fileInputRef = useRef(null)
 
   if (openedId) return <InternalDocumentDetail documentId={openedId} onBack={() => setOpenedId(null)} onDeleted={() => { setOpenedId(null); library.resetSearch() }} />
 
@@ -29,7 +30,8 @@ export default function InternalDocumentsView() {
     try {
       const result = await library.upload(file, title)
       setNotice(result.deduplicated ? 'This PDF was already indexed.' : 'Document indexed successfully.')
-      setFile(null); setTitle(''); event.currentTarget.reset()
+      setFile(null); setTitle('')
+      if (fileInputRef.current) fileInputRef.current.value = ''
     } catch (err) { setNotice(err.message) }
     finally { setUploading(false) }
   }
@@ -43,10 +45,32 @@ export default function InternalDocumentsView() {
   return <div className="view-stack">
     <PageIntro eyebrow="Shared knowledge base" title="Internal Documents" description="Upload policies and contracts, search their meaning, and review regulatory changes against the source." status={`${library.documents.length} documents shown`} />
     <div className="mb-4 grid gap-3 rounded-lg border border-border bg-card p-4 lg:grid-cols-2">
-      <form onSubmit={submitUpload} className="flex flex-wrap items-end gap-2">
-        <label className="min-w-0 flex-1 text-xs text-muted">Upload PDF<input aria-label="Upload PDF" type="file" accept="application/pdf,.pdf" onChange={event => setFile(event.target.files?.[0] || null)} className="mt-1 block w-full text-sm" /></label>
-        <input aria-label="Document title" value={title} onChange={event => setTitle(event.target.value)} placeholder="Optional title" className="h-9 rounded-lg border border-border px-3 text-sm" />
-        <Button disabled={!file || uploading}>{uploading ? <><span className="spinner" /> Indexing…</> : <><Upload size={15} /> Upload document</>}</Button>
+      <form onSubmit={submitUpload} className="rounded-lg border border-border bg-panel p-4">
+        <div
+          onDragOver={event => event.preventDefault()}
+          onDrop={event => {
+            event.preventDefault()
+            const droppedFile = event.dataTransfer.files?.[0]
+            if (droppedFile) setFile(droppedFile)
+          }}
+          className="flex min-h-28 flex-col items-center justify-center rounded-lg border border-dashed border-border bg-card px-4 py-5 text-center"
+        >
+          <input ref={fileInputRef} aria-label="Choose a PDF" type="file" accept="application/pdf,.pdf" onChange={event => setFile(event.target.files?.[0] || null)} className="sr-only" />
+          <Upload size={22} className="mb-2 text-accent" />
+          {file ? <>
+            <strong className="max-w-full truncate text-sm">{file.name}</strong>
+            <span className="mt-1 text-xs text-muted">{bytes(file.size)}</span>
+            <button type="button" onClick={() => fileInputRef.current?.click()} className="mt-2 text-xs font-medium text-accent hover:underline">Change file</button>
+          </> : <>
+            <button type="button" onClick={() => fileInputRef.current?.click()} className="text-sm font-semibold text-accent hover:underline">Choose PDF</button>
+            <span className="mt-1 text-xs text-muted">or drag and drop it here</span>
+            <span className="mt-2 text-xs text-muted">PDF files only</span>
+          </>}
+        </div>
+        {file && <div className="mt-3 flex flex-wrap items-end gap-2">
+          <label className="min-w-48 flex-1 text-xs text-muted">Document title (optional)<input aria-label="Document title" value={title} onChange={event => setTitle(event.target.value)} placeholder={file.name.replace(/\.pdf$/i, '')} className="mt-1 h-9 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground" /></label>
+          <Button disabled={uploading}>{uploading ? <><span className="spinner" /> Extracting and indexing…</> : <><Upload size={15} /> Upload and index</>}</Button>
+        </div>}
       </form>
       <form onSubmit={submitSearch} className="flex items-end gap-2">
         <label className="flex-1 text-xs text-muted">Semantic search<input aria-label="Semantic search" value={query} onChange={event => setQuery(event.target.value)} placeholder="e.g. breach notification duties" className="mt-1 h-9 w-full rounded-lg border border-border px-3 text-sm" /></label>
