@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from db.models import Base
+from backend.db.models import Base
 
 load_dotenv()
 

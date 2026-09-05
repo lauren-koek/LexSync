@@ -2,7 +2,7 @@
 
 PostgreSQL 16. SQLAlchemy 2.x models in `db/models.py`. Tables are created automatically on first pipeline run via `create_tables()`.
 
-## Schema — `documents` table
+## Current schema — `documents` table
 
 | Column | Type | Nullable | Description |
 |---|---|---|---|
@@ -28,6 +28,19 @@ PostgreSQL 16. SQLAlchemy 2.x models in `db/models.py`. Tables are created autom
 
 `source_url` carries a unique constraint — pipeline runs upsert on it.
 
+## Planned pgvector schema
+
+The persistence layer will be split into two responsibilities:
+
+1. A regulatory-ingestion table for downloaded PDF text, source metadata,
+   and LLM recommendations. The current `documents` model covers this data
+   and will be migrated deliberately when the final table name is chosen.
+2. An internal-document table for documents used by the internal team. This
+   table will own the pgvector embedding column and its vector index.
+
+Regulatory PDFs and LLM recommendations will not receive vector columns.
+FastEmbed, Qdrant, and ONNX Runtime are not part of this architecture.
+
 ## Running locally with Docker
 
 Start only Postgres:
@@ -39,7 +52,7 @@ docker-compose up postgres -d
 Then run the pipeline (tables are created automatically):
 
 ```bash
-DATABASE_URL=postgresql://lexsync:lexsync@localhost:5432/lexsync python pipeline.py
+DATABASE_URL=postgresql://lexsync:lexsync@localhost:5432/lexsync python -m backend.pipeline
 ```
 
 Or put `DATABASE_URL` in `.env` and omit the prefix.
@@ -71,8 +84,8 @@ Then re-run the pipeline — `create_tables()` will recreate the schema.
 To reset via Python:
 
 ```python
-from db.models import Base
-from db.session import engine
+from backend.db.models import Base
+from backend.db.session import engine
 
 Base.metadata.drop_all(engine)
 Base.metadata.create_all(engine)

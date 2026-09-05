@@ -5,6 +5,8 @@ __pycache__/
 .DS_Store
 .worktrees/
 .superpowers
+**/.superpowers/
+.venv/
 
 # Scraper outputs
 scraper/output/*.json
@@ -12,3 +14,6 @@ scraper/output/pdfs/*
 !scraper/output/pdfs/.gitkeep
 scraper/output/ocr/*
 !scraper/output/ocr/.gitkeep
+backend/scraper/output/*.json
+backend/scraper/output/pdfs/*
+backend/scraper/output/ocr/*
