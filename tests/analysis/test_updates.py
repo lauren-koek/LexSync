@@ -152,6 +152,7 @@ def test_fetch_updates_refresh_regenerates_cached_llm_output(mas_json, disable_s
         existing.llm_summary = processed.llm_summary
         existing.llm_categories = processed.llm_categories
         existing.llm_impact_check = processed.llm_impact_check
+        return existing
 
     with (
         patch(

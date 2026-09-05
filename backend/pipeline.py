@@ -3,9 +3,11 @@ import json
 import logging
 from datetime import UTC, date, datetime
 from pathlib import Path
+from uuid import UUID
 
 from backend.db import Document, create_tables, get_session
 from backend.llm.processor import process_document
+from backend.analysis.suggestions import analyze_regulatory_document
 from backend.scraper.src.pdf_ocr import download_and_ocr
 
 logger = logging.getLogger(__name__)
@@ -35,7 +37,7 @@ def parse_date(date_str: str) -> date | None:
         return None
 
 
-def _upsert_document(session, doc: dict, ocr_text: str | None, processed) -> None:
+def _upsert_document(session, doc: dict, ocr_text: str | None, processed) -> Document:
     source_url = doc.get("url", "")
     existing = session.query(Document).filter_by(source_url=source_url).first()
 
@@ -65,6 +67,7 @@ def _upsert_document(session, doc: dict, ocr_text: str | None, processed) -> Non
             processed_at=now if processed else None,
         )
         session.add(record)
+        saved = record
     else:
         existing.title = doc.get("title")
         existing.doc_type = doc.get("doc_type")
@@ -85,6 +88,21 @@ def _upsert_document(session, doc: dict, ocr_text: str | None, processed) -> Non
             existing.llm_impact_check = processed.llm_impact_check
             existing.processed_at = now
         existing.scraped_at = now
+        saved = existing
+    return saved
+
+
+def _generate_suggestions_safely(document_id: UUID | str) -> None:
+    """Analyze a saved regulation without endangering its ingestion commit."""
+    try:
+        with get_session() as session:
+            analyze_regulatory_document(UUID(str(document_id)), session)
+    except Exception:
+        logger.warning(
+            "Suggestion generation failed for regulatory document %s",
+            document_id,
+            exc_info=True,
+        )
 
 
 def run(
@@ -128,7 +146,12 @@ def run(
                 processed = process_document(doc, ocr_text)
 
             with get_session() as session:
-                _upsert_document(session, doc, ocr_text, processed)
+                saved = _upsert_document(session, doc, ocr_text, processed)
+                session.flush()
+                saved_id = saved.id
+
+            if ocr_text and ocr_text.strip():
+                _generate_suggestions_safely(saved_id)
 
             logger.info("[%d/%d] Saved: %s", i, total, title)
 

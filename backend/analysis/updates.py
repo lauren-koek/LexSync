@@ -7,7 +7,7 @@ from pathlib import Path
 
 from backend.db import Document, get_session
 from backend.llm.processor import process_document
-from backend.pipeline import _upsert_document, parse_date
+from backend.pipeline import _generate_suggestions_safely, _upsert_document, parse_date
 from backend.scraper.src.pdf_ocr import download_and_ocr
 
 logger = logging.getLogger(__name__)
@@ -116,11 +116,17 @@ def fetch_updates(
             except Exception:
                 logger.warning("LLM processing failed for %s", url, exc_info=True)
 
+        saved_id = None
         with get_session() as session:
-            _upsert_document(session, doc, ocr_text, processed)
+            saved_record = _upsert_document(session, doc, ocr_text, processed)
+            session.flush()
+            saved_id = saved_record.id
             saved = session.query(Document).filter_by(source_url=url).first()
             if saved:
                 results.append(_doc_to_dict(saved))
+
+        if not already_processed and ocr_text and ocr_text.strip() and saved_id:
+            _generate_suggestions_safely(saved_id)
 
     return results
 
