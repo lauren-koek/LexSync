@@ -13,7 +13,7 @@ export default function DocumentList({ docs, selected, onSelect, loading, error,
     return (
       <aside className="doc-list">
         <div className="doc-list-empty">
-          <span className="spinner" /> Processing documents…
+          <span className="spinner" /> Scraping MAS &amp; processing documents… this may take a minute.
         </div>
       </aside>
     )

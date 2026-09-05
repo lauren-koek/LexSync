@@ -18,16 +18,54 @@ _DEFAULT_OCR_DIR = Path("backend/scraper/output/ocr")
 _MAX_RESULTS = 50
 
 
+def _run_scraper(days: int, output_path: Path) -> None:
+    """Run the Playwright MAS scraper and write results to output_path."""
+    from playwright.sync_api import sync_playwright
+
+    from backend.scraper.src.mas_regulations_scraper import (
+        enrich_with_details,
+        fetch_listing_html,
+        filter_last_n_days,
+        parse_listing,
+        save_records,
+    )
+
+    logger.info("Running MAS scraper for last %d day(s)…", days)
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page(ignore_https_errors=True)
+        listing_html = fetch_listing_html(page)
+        records = parse_listing(listing_html)
+        logger.info("Scraper found %d documents in listing", len(records))
+        if days > 0:
+            records = filter_last_n_days(records, days)
+            logger.info("Filtered to last %d day(s): %d documents", days, len(records))
+        enrich_with_details(page, records)
+        browser.close()
+
+    save_records(records, path=str(output_path))
+    logger.info("Scraper saved %d records to %s", len(records), output_path)
+
+
+def _normalise_doc(doc: dict) -> dict:
+    """Ensure doc has a pdf_link field (scraper writes pdf_links list)."""
+    if "pdf_link" not in doc:
+        links = doc.get("pdf_links") or []
+        doc = {**doc, "pdf_link": links[0] if links else None}
+    return doc
+
+
 def fetch_updates(days: int, json_path: Path = _DEFAULT_JSON) -> list[dict]:
-    cutoff = date.today() - timedelta(days=days)
+    _run_scraper(days, json_path)
 
     try:
         data = json.loads(json_path.read_text(encoding="utf-8"))
     except FileNotFoundError:
-        logger.warning("MAS JSON not found: %s", json_path)
+        logger.warning("MAS JSON not found after scrape: %s", json_path)
         return []
 
-    docs = [d for d in data.get("documents", []) if _within_window(d, cutoff)]
+    cutoff = date.today() - timedelta(days=days)
+    docs = [_normalise_doc(d) for d in data.get("documents", []) if _within_window(d, cutoff)]
     docs = docs[:_MAX_RESULTS]
 
     results: list[dict] = []
