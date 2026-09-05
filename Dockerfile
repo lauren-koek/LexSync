@@ -1,3 +1,11 @@
+# Build the frontend (Vite/React) in a Node stage.
+FROM node:22-slim AS frontend-build
+WORKDIR /frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
 FROM python:3.14-slim
 
 # Install system dependencies
@@ -20,6 +28,11 @@ RUN playwright install chromium --with-deps
 # Copy the full project
 COPY . .
 
+# Copy the compiled frontend from the Node build stage. FastAPI serves it
+# as static files from frontend/dist (see backend/main.py). Must come after
+# `COPY . .` so it isn't overwritten by the local tree (which has no dist).
+COPY --from=frontend-build /frontend/dist ./frontend/dist
+
 RUN chmod +x /app/entrypoint.sh
 
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/bin/sh", "-c", "exec uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

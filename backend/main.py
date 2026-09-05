@@ -1,6 +1,8 @@
 import os
+from pathlib import Path
 
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from backend.api.routes import app
 
@@ -17,3 +19,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Serve the built frontend (Vite output) when present. The API router is
+# registered first, so /api/v1/* still takes precedence over this catch-all
+# mount. html=True makes StaticFiles fall back to index.html for SPA routes.
+# The mount is skipped in API-only environments where dist/ hasn't been built.
+_FRONTEND_DIST = Path(
+    os.environ.get(
+        "FRONTEND_DIST",
+        Path(__file__).resolve().parent.parent / "frontend" / "dist",
+    )
+)
+if _FRONTEND_DIST.is_dir():
+    app.mount("/", StaticFiles(directory=_FRONTEND_DIST, html=True), name="frontend")

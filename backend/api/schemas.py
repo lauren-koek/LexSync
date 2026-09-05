@@ -52,3 +52,22 @@ class AnalysisResponse(BaseModel):
     match_count: int
     report: list[ReportEntryResponse]
     propagation: PropagationResponse
+
+
+class UpdatesRequest(BaseModel):
+    days: int = Field(ge=1, description="Lookback window in days")
+
+
+class DocumentResponse(BaseModel):
+    id: str | None
+    title: str | None
+    date: str | None
+    doc_type: str | None
+    topic: str | None
+    tags: list[str]
+    applies_to: list[str]
+    source_url: str
+    pdf_url: str | None
+    llm_summary: str | None
+    llm_categories: list[str]
+    llm_impact_check: str | None
