@@ -11,6 +11,15 @@ function Section({ label, children }) {
   )
 }
 
+function cleanImpactCheck(text) {
+  return text
+    .split(/\r?\n/)
+    .filter(line => line.trim().toLowerCase() !== 'impact check')
+    .filter(line => !line.trim().toLowerCase().startsWith('effective date:'))
+    .join('\n')
+    .trim()
+}
+
 function Tags({ items }) {
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -32,6 +41,7 @@ export default function DetailPanel({ doc }) {
 
   const level = impactLevel(doc)
   const meta = IMPACT_META[level]
+  const cleanedImpact = doc.llm_impact_check && cleanImpactCheck(doc.llm_impact_check)
 
   return (
     <main className="flex-1 overflow-y-auto rounded-lg border border-border bg-card px-6 py-5">
@@ -46,6 +56,7 @@ export default function DetailPanel({ doc }) {
         {doc.date && <span className="mono">{doc.date}</span>}
         {doc.doc_type && <span>{doc.doc_type}</span>}
         {doc.topic && <span>{doc.topic}</span>}
+        {doc.effective_date && <span>Effective {doc.effective_date}</span>}
         {doc.source_url && (
           <a
             className="inline-flex items-center gap-1"
@@ -67,10 +78,10 @@ export default function DetailPanel({ doc }) {
           </Section>
         )}
 
-        {doc.llm_impact_check && (
+        {cleanedImpact && (
           <Section label="Impact check">
             <p className="text-sm leading-relaxed text-ink-soft">
-              {doc.llm_impact_check}
+              {cleanedImpact}
             </p>
           </Section>
         )}

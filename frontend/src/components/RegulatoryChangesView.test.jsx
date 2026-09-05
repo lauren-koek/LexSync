@@ -40,8 +40,11 @@ test('filters rows by document type', () => {
   expect(screen.getByText('Capital Guideline')).toBeInTheDocument()
 })
 
-test('opens a detail panel when a row is clicked', () => {
+test('opens the affected-documents page when a row is clicked', () => {
   render(<RegulatoryChangesView documents={view()} />)
   fireEvent.click(screen.getByText('AML Circular'))
-  expect(screen.getByText('Open source')).toBeInTheDocument()
+  expect(
+    screen.getByRole('button', { name: /Back to regulatory changes/i }),
+  ).toBeInTheDocument()
+  expect(screen.getByText('Regulatory change')).toBeInTheDocument()
 })
