@@ -33,6 +33,30 @@ class ProcessedDoc:
     llm_impact_check: str = ""
 
 
+def _parse_response(raw: str) -> ProcessedDoc:
+    """Parse and validate the structured fields returned by the LLM."""
+    cleaned = raw.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("```", 2)[1]
+        if cleaned.startswith("json"):
+            cleaned = cleaned[4:]
+        cleaned = cleaned.strip()
+
+    parsed = json.loads(cleaned)
+    if not isinstance(parsed, dict):
+        raise ValueError("LLM response must be a JSON object")
+
+    return ProcessedDoc(
+        llm_summary=str(parsed.get("summary", "")),
+        llm_categories=[
+            category
+            for category in parsed.get("categories", [])
+            if category in STANDARD_TAGS
+        ],
+        llm_impact_check=str(parsed.get("impact_check", "")),
+    )
+
+
 def process_document(doc: dict, ocr_text: str) -> ProcessedDoc:
     title = doc.get("title", "")
     date = doc.get("date", "")
@@ -56,31 +80,37 @@ def process_document(doc: dict, ocr_text: str) -> ProcessedDoc:
         "Return only the JSON object, no markdown fences or additional text."
     )
 
-    raw = chat(user_prompt, system=PROMPT)
-
     try:
-        # Strip markdown code fences if present
-        cleaned = raw.strip()
-        if cleaned.startswith("```"):
-            cleaned = cleaned.split("```", 2)[1]
-            if cleaned.startswith("json"):
-                cleaned = cleaned[4:]
-            cleaned = cleaned.strip()
-
-        parsed = json.loads(cleaned)
-        summary = str(parsed.get("summary", ""))
-        categories = [c for c in parsed.get("categories", []) if c in STANDARD_TAGS]
-        impact_check = str(parsed.get("impact_check", ""))
+        raw = chat(user_prompt, system=PROMPT)
+        processed = _parse_response(raw)
         logger.info("Successfully processed document: %s", title or url)
-        return ProcessedDoc(
-            llm_summary=summary,
-            llm_categories=categories,
-            llm_impact_check=impact_check,
-        )
+        return processed
     except (json.JSONDecodeError, AttributeError, KeyError, TypeError, ValueError):
-        logger.warning("Failed to parse LLM JSON response for document: %s", title or url)
-        return ProcessedDoc(
-            llm_summary=raw,
-            llm_categories=[],
-            llm_impact_check="",
+        logger.warning(
+            "Malformed LLM JSON response for document %s; retrying once",
+            title or url,
         )
+        repair_prompt = (
+            "Your previous response was malformed or did not match the required JSON "
+            "object. Return a complete replacement containing exactly summary, "
+            "categories, and impact_check. Return only valid JSON."
+        )
+        repaired = chat(
+            repair_prompt,
+            system=PROMPT,
+            history=[
+                {"role": "user", "content": user_prompt},
+                {"role": "assistant", "content": raw},
+            ],
+        )
+        try:
+            processed = _parse_response(repaired)
+        except (json.JSONDecodeError, AttributeError, KeyError, TypeError, ValueError) as exc:
+            logger.warning(
+                "Failed to obtain valid LLM JSON after retry for document: %s",
+                title or url,
+            )
+            raise ValueError("LLM did not return valid JSON after retry") from exc
+
+        logger.info("Successfully processed document after retry: %s", title or url)
+        return processed

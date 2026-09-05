@@ -140,6 +140,37 @@ def test_fetch_updates_uses_cache_when_llm_summary_exists(mas_json, disable_scra
     mock_ocr.assert_not_called()
 
 
+def test_fetch_updates_refresh_regenerates_cached_llm_output(mas_json, disable_scraper):
+    existing = _make_existing_doc()
+    existing.ocr_text = "cached OCR text"
+    regenerated = MagicMock()
+    regenerated.llm_summary = "regenerated summary"
+    regenerated.llm_categories = ["Financial Services"]
+    regenerated.llm_impact_check = "Review counterparty exposure policies"
+
+    def apply_update(session, doc, ocr_text, processed):
+        existing.llm_summary = processed.llm_summary
+        existing.llm_categories = processed.llm_categories
+        existing.llm_impact_check = processed.llm_impact_check
+
+    with (
+        patch(
+            "backend.analysis.updates.get_session",
+            return_value=_make_mock_session(existing),
+        ),
+        patch(
+            "backend.analysis.updates.process_document",
+            return_value=regenerated,
+        ),
+        patch("backend.analysis.updates._upsert_document", side_effect=apply_update),
+    ):
+        results = fetch_updates(7, json_path=mas_json, refresh=True)
+
+    assert results[0]["llm_summary"] == "regenerated summary"
+    assert results[0]["llm_categories"] == ["Financial Services"]
+    assert results[0]["llm_impact_check"] == "Review counterparty exposure policies"
+
+
 def test_fetch_updates_processes_uncached_doc(mas_json, disable_scraper):
     processed = MagicMock()
     processed.llm_summary = "new summary"

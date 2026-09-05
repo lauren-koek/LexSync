@@ -7,7 +7,7 @@ export default function TopBar({ days, onDaysChange, onFetch, onRefresh, loading
       <div>
         <span className="eyebrow">Update controls</span>
         <p className="mt-0.5 text-[12px] leading-snug text-muted">
-          Fetch new publications or quietly refresh saved metadata.
+          Fetch new publications or regenerate saved document analysis.
         </p>
       </div>
       <div className="ml-auto flex flex-wrap items-end gap-3">
@@ -36,7 +36,7 @@ export default function TopBar({ days, onDaysChange, onFetch, onRefresh, loading
           variant="secondary"
           onClick={onRefresh}
           disabled={loading}
-          title="Re-pull scraped fields for documents already saved; keeps cached OCR and AI output"
+          title="Re-pull metadata and regenerate AI output using cached OCR where available"
         >
           <RefreshCw size={15} />
           Re-sync metadata

@@ -66,9 +66,8 @@ def fetch_updates(
 
     By default, documents already saved with an LLM summary are served from the
     database and their expensive OCR/LLM steps are skipped. When ``refresh`` is
-    True, those documents' scraped metadata (including ``issued_pursuant_to``,
-    tags, and ``applies_to``) is re-pulled and overwritten, while the cached
-    OCR text and LLM output are preserved (no re-processing).
+    True, scraped metadata is re-pulled and LLM output is regenerated, reusing
+    cached OCR text when available.
     """
     _run_scraper(days, json_path)
 
@@ -88,22 +87,21 @@ def fetch_updates(
 
         already_processed = False
         cached: dict | None = None
+        cached_ocr: str | None = None
         with get_session() as session:
             existing = session.query(Document).filter_by(source_url=url).first()
             if existing and existing.llm_summary:
                 already_processed = True
                 cached = _doc_to_dict(existing)
+                cached_ocr = existing.ocr_text
 
         # Serve from cache unless the caller explicitly asked to refresh.
         if already_processed and not refresh:
             results.append(cached)
             continue
 
-        # For a refresh of an already-processed doc, re-upsert scraped metadata
-        # only — leave OCR/LLM as None so the existing cached values are kept.
-        ocr_text: str | None = None
-        processed = None
-        if not already_processed:
+        ocr_text = cached_ocr
+        if not ocr_text:
             pdf_url = doc.get("pdf_link")
             if pdf_url:
                 try:
@@ -111,11 +109,12 @@ def fetch_updates(
                 except Exception:
                     logger.warning("OCR failed for %s", url, exc_info=True)
 
-            if ocr_text:
-                try:
-                    processed = process_document(doc, ocr_text)
-                except Exception:
-                    logger.warning("LLM processing failed for %s", url, exc_info=True)
+        processed = None
+        if ocr_text:
+            try:
+                processed = process_document(doc, ocr_text)
+            except Exception:
+                logger.warning("LLM processing failed for %s", url, exc_info=True)
 
         with get_session() as session:
             _upsert_document(session, doc, ocr_text, processed)

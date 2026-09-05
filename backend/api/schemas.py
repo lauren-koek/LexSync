@@ -58,7 +58,7 @@ class UpdatesRequest(BaseModel):
     days: int = Field(ge=1, description="Lookback window in days")
     refresh: bool = Field(
         default=False,
-        description="Re-pull scraped metadata for already-saved documents (skips OCR/LLM re-processing)",
+        description="Re-pull metadata and regenerate LLM output for saved documents",
     )
 
 
