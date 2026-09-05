@@ -1,0 +1,243 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f5f5f7;
+  color: #1d1d1f;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* TopBar */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 24px;
+  height: 56px;
+  background: #fff;
+  border-bottom: 1px solid #e5e5ea;
+  flex-shrink: 0;
+}
+
+.topbar-title {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  color: #1d1d1f;
+  margin-right: auto;
+}
+
+.topbar label {
+  font-size: 13px;
+  color: #6e6e73;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.topbar input[type="number"] {
+  width: 60px;
+  padding: 5px 8px;
+  border: 1px solid #d2d2d7;
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.topbar input[type="number"]:focus {
+  outline: none;
+  border-color: #0071e3;
+}
+
+.fetch-btn {
+  padding: 7px 16px;
+  background: #0071e3;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fetch-btn:hover:not(:disabled) { background: #0077ed; }
+.fetch-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Main layout */
+.main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Document list */
+.doc-list {
+  width: 320px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid #e5e5ea;
+  background: #fff;
+  padding: 12px 0;
+}
+
+.doc-list-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #6e6e73;
+  font-size: 13px;
+  text-align: center;
+  padding: 24px;
+}
+
+.doc-list-error {
+  color: #ff3b30;
+  font-size: 13px;
+  padding: 16px;
+}
+
+/* Document card */
+.doc-card {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background 0.1s;
+}
+
+.doc-card:hover { background: #f5f5f7; }
+
+.doc-card.selected {
+  background: #f0f4ff;
+  border-left-color: #0071e3;
+}
+
+.doc-card-title {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.doc-card-meta {
+  font-size: 11px;
+  color: #6e6e73;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.doc-card-type {
+  background: #e5e5ea;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Detail panel */
+.detail-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 40px;
+}
+
+.detail-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #6e6e73;
+  font-size: 14px;
+}
+
+.detail-title {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+
+.detail-meta {
+  font-size: 13px;
+  color: #6e6e73;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e5e5ea;
+}
+
+.detail-section {
+  margin-bottom: 28px;
+}
+
+.detail-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6e6e73;
+  margin-bottom: 8px;
+}
+
+.detail-section p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #1d1d1f;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  background: #e8f0fe;
+  color: #1a56db;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.detail-link {
+  font-size: 13px;
+  color: #0071e3;
+  text-decoration: none;
+}
+
+.detail-link:hover { text-decoration: underline; }
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.doc-list-empty .spinner {
+  border-color: #d2d2d7;
+  border-top-color: #0071e3;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
