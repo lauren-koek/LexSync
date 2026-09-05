@@ -18,8 +18,8 @@ openai
 streamlit
 pandas
 fastapi
-python-multipart
 uvicorn[standard]
+python-multipart
 
 # Optional, heavier document parser — ingest.py falls back to pdfplumber
 # automatically if this isn't installed. Uncomment to enable:

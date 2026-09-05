@@ -24,16 +24,15 @@ from __future__ import annotations
 
 import hashlib
 import math
-import os
 import re
 from collections.abc import Generator
 from contextlib import contextmanager
 
-import requests
 from sqlalchemy.orm import Session
 
 from backend.db.models import InternalDocumentChunk
 from backend.db.session import get_session
+from backend.llm import client as llm_client
 
 # Must match INTERNAL_EMBEDDING_DIM in backend/db/models.py — the pgvector
 # column is a fixed width, so every embedding written or queried has to be
@@ -44,14 +43,6 @@ EMBEDDING_DIM = 384
 # genuine semantic hit. Mirrors store.py's SIMILARITY_THRESHOLD so results
 # from either index are comparable.
 SIMILARITY_THRESHOLD = 0.50
-
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-# OpenAI's v3 embedding models support a `dimensions` parameter that
-# truncates their native (larger) embedding to a requested size via
-# Matryoshka representation learning, which is how a 384-wide pgvector
-# column stays compatible with a hosted embedding model instead of having
-# to hardcode the model's native width.
-EMBEDDING_MODEL = os.environ.get("OPENROUTER_EMBEDDING_MODEL", "openai/text-embedding-3-small")
 
 
 # ---------------------------------------------------------------------------
@@ -77,24 +68,14 @@ def embed_text(text_value: str) -> list[float]:
 
 
 def _fetch_remote_embedding(text_value: str) -> list[float] | None:
-    """Call the hosted embeddings endpoint. Returns None on any failure."""
-    api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
-    if not api_key:
-        return None
-
+    """Call the hosted embeddings endpoint via the shared OpenRouter client
+    (backend/llm/client.py). Returns None on any failure — no API key
+    configured, network error, or a provider response client.embed()
+    couldn't parse — so the caller can fall back to the offline embedding
+    instead of the whole index write/read failing.
+    """
     try:
-        response = requests.post(
-            f"{OPENROUTER_BASE_URL}/embeddings",
-            headers={"Authorization": f"Bearer {api_key}"},
-            json={
-                "model": EMBEDDING_MODEL,
-                "input": text_value,
-                "dimensions": EMBEDDING_DIM,
-            },
-            timeout=30,
-        )
-        response.raise_for_status()
-        vector = response.json()["data"][0]["embedding"]
+        vector = llm_client.embed(text_value, dimensions=EMBEDDING_DIM)
     except Exception:
         return None
 
