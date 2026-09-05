@@ -3,6 +3,7 @@ import logging
 from dataclasses import dataclass, field
 
 from backend.llm.client import chat
+from backend.llm.hallucination_check import check_summary_grounding
 from backend.llm.prompts.newsletter_prompt import PROMPT
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,15 @@ class ProcessedDoc:
     llm_summary: str
     llm_categories: list[str] = field(default_factory=list)
     llm_impact_check: str = ""
+    hallucination_flag: bool = False
+    hallucination_notes: str = ""
+
+
+def _apply_grounding(processed: ProcessedDoc, source_text: str) -> ProcessedDoc:
+    check = check_summary_grounding(source_text, processed.llm_summary)
+    processed.hallucination_flag = not check.is_grounded
+    processed.hallucination_notes = check.notes
+    return processed
 
 
 def _parse_response(raw: str) -> ProcessedDoc:
@@ -82,7 +92,7 @@ def process_document(doc: dict, ocr_text: str) -> ProcessedDoc:
 
     try:
         raw = chat(user_prompt, system=PROMPT)
-        processed = _parse_response(raw)
+        processed = _apply_grounding(_parse_response(raw), truncated_ocr)
         logger.info("Successfully processed document: %s", title or url)
         return processed
     except (json.JSONDecodeError, AttributeError, KeyError, TypeError, ValueError):
@@ -104,7 +114,7 @@ def process_document(doc: dict, ocr_text: str) -> ProcessedDoc:
             ],
         )
         try:
-            processed = _parse_response(repaired)
+            processed = _apply_grounding(_parse_response(repaired), truncated_ocr)
         except (json.JSONDecodeError, AttributeError, KeyError, TypeError, ValueError) as exc:
             logger.warning(
                 "Failed to obtain valid LLM JSON after retry for document: %s",
