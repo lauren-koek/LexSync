@@ -6,6 +6,7 @@ from backend.db.migrations import runner
 def test_run_migrations_applies_numbered_modules_in_order(monkeypatch):
     discovered = [
         SimpleNamespace(name="0002_second"),
+        SimpleNamespace(name="0003_third"),
         SimpleNamespace(name="helpers"),
         SimpleNamespace(name="0001_first"),
     ]
@@ -23,4 +24,5 @@ def test_run_migrations_applies_numbered_modules_in_order(monkeypatch):
     assert applied == [
         "backend.db.migrations.0001_first",
         "backend.db.migrations.0002_second",
+        "backend.db.migrations.0003_third",
     ]

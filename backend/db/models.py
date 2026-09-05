@@ -3,8 +3,8 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import DateTime, Index, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, UniqueConstraint, func
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON, Date, String, Text
 
 # Dimensionality of the vectors written by backend/analysis/internal_index.py.
@@ -51,6 +51,32 @@ class Document(Base):
     )
 
 
+class InternalDocument(Base):
+    __tablename__ = "internal_documents"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    filename: Mapped[str] = mapped_column(Text, nullable=False)
+    object_key: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    content_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="indexed")
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    chunk_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), onupdate=func.now()
+    )
+
+    chunks: Mapped[list["InternalDocumentChunk"]] = relationship(
+        back_populates="document", cascade="all, delete-orphan"
+    )
+    suggestions: Mapped[list["DocumentSuggestion"]] = relationship(
+        back_populates="internal_document", cascade="all, delete-orphan"
+    )
+
+
 class InternalDocumentChunk(Base):
     """A retrieval-sized clause from an internal legal document, persisted
     alongside its embedding so semantic search survives process restarts.
@@ -65,10 +91,11 @@ class InternalDocumentChunk(Base):
     __tablename__ = "internal_document_chunks"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    # Groups chunks back into their source document (e.g. a filename stem);
-    # not a foreign key because internal documents aren't modelled as rows
-    # of their own yet — only their chunks are.
-    doc_id: Mapped[str] = mapped_column(Text, nullable=False)
+    internal_document_id: Mapped[UUID] = mapped_column(
+        ForeignKey("internal_documents.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     title: Mapped[str] = mapped_column(Text, nullable=False)
     # Human-readable citation ("Clause 8", "Section 12A (part 2)") carried
     # through from backend/analysis/ingest.py so matches stay traceable to a
@@ -85,6 +112,10 @@ class InternalDocumentChunk(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+    document: Mapped[InternalDocument] = relationship(back_populates="chunks")
+    suggestions: Mapped[list["DocumentSuggestion"]] = relationship(
+        back_populates="internal_chunk", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
         # HNSW needs no pre-existing data to build (unlike IVFFlat, which
@@ -100,3 +131,44 @@ class InternalDocumentChunk(Base):
         ),
     )
 
+
+class DocumentSuggestion(Base):
+    __tablename__ = "document_suggestions"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    regulatory_document_id: Mapped[UUID] = mapped_column(
+        ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    internal_document_id: Mapped[UUID] = mapped_column(
+        ForeignKey("internal_documents.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    internal_chunk_id: Mapped[UUID] = mapped_column(
+        ForeignKey("internal_document_chunks.id", ondelete="CASCADE"), nullable=False
+    )
+    regulation_clause_reference: Mapped[str] = mapped_column(Text, nullable=False)
+    regulation_content: Mapped[str] = mapped_column(Text, nullable=False)
+    similarity_score: Mapped[float] = mapped_column(Float, nullable=False)
+    is_affected: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    impact_score: Mapped[int] = mapped_column(Integer, nullable=False)
+    legal_reasoning: Mapped[str] = mapped_column(Text, nullable=False)
+    proposed_amended_clause: Mapped[str] = mapped_column(Text, nullable=False)
+    statutory_citations: Mapped[Any] = mapped_column(JSON, nullable=False, default=list)
+    redline_diff: Mapped[str] = mapped_column(Text, nullable=False)
+    analysis_source: Mapped[str] = mapped_column(String(30), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), onupdate=func.now()
+    )
+
+    internal_document: Mapped[InternalDocument] = relationship(back_populates="suggestions")
+    internal_chunk: Mapped[InternalDocumentChunk] = relationship(back_populates="suggestions")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "regulatory_document_id",
+            "regulation_clause_reference",
+            "internal_chunk_id",
+            name="uq_document_suggestion_match",
+        ),
+    )
