@@ -47,7 +47,10 @@ class PropagationResponse(BaseModel):
 
 class AnalysisResponse(BaseModel):
     regulation_id: str
-    asset_id: str
+    # None for an index-backed analysis (run_analysis_against_index) — matches
+    # can span multiple internal documents there, so there's no single asset
+    # id to report; each report entry still carries its own asset.doc_id.
+    asset_id: str | None = None
     clause_count: int
     match_count: int
     report: list[ReportEntryResponse]
@@ -77,3 +80,5 @@ class DocumentResponse(BaseModel):
     llm_summary: str | None
     llm_categories: list[str]
     llm_impact_check: str | None
+    llm_summary_flagged: bool = False
+    llm_summary_check_notes: str | None = None

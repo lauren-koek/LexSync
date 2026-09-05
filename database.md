@@ -21,6 +21,8 @@ PostgreSQL 16. SQLAlchemy 2.x models in `db/models.py`. Tables are created autom
 | `llm_summary` | text | Yes | 80–150 word LLM-generated summary |
 | `llm_categories` | jsonb | Yes | Array of category strings from the standard tag list |
 | `llm_impact_check` | text | Yes | LLM-generated impact check block |
+| `llm_summary_flagged` | boolean | Yes | Set by `backend/llm/hallucination_check.py` — true if `llm_summary` contains a number/date not found in the source text, or drifted vocabulary. Advisory only. |
+| `llm_summary_check_notes` | text | Yes | Human-readable explanation from the same check (e.g. which numbers were unsupported) |
 | `scraped_at` | timestamptz | Yes | Timestamp of last scrape |
 | `processed_at` | timestamptz | Yes | Timestamp of last LLM processing |
 | `created_at` | timestamptz | No | Row creation time (server default) |
