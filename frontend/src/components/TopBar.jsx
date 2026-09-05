@@ -3,12 +3,11 @@ import Button from './ui/Button.jsx'
 
 export default function TopBar({ days, onDaysChange, onFetch, onRefresh, loading }) {
   return (
-    <header className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border bg-card px-4 py-3">
+    <header className="feed-toolbar workspace-panel">
       <div>
-        <span className="eyebrow">MAS regulatory feed</span>
+        <span className="eyebrow">Update controls</span>
         <p className="mt-0.5 text-[12px] leading-snug text-muted">
-          Fetch new pulls fresh documents. Re-sync metadata updates scraped
-          fields on saved documents without re-running OCR or AI analysis.
+          Fetch new publications or quietly refresh saved metadata.
         </p>
       </div>
       <div className="ml-auto flex flex-wrap items-end gap-3">

@@ -3,6 +3,7 @@ import Badge from './ui/Badge.jsx'
 import AffectedDocumentsView from './AffectedDocumentsView.jsx'
 import { IMPACT_META, impactLevel } from '../lib/impact.js'
 import { affectedCountFor } from '../lib/mockAffected.js'
+import PageIntro from './ui/PageIntro.jsx'
 
 function uniqueValues(docs, key) {
   return [...new Set(docs.map(d => d[key]).filter(Boolean))].sort()
@@ -77,13 +78,8 @@ export default function RegulatoryChangesView({ documents }) {
   }
 
   return (
-    <div className="flex h-full flex-col gap-4">
-      <div>
-        <h1 className="text-lg font-semibold">Regulatory Changes</h1>
-        <p className="text-sm text-muted">
-          Timeline of tracked MAS publications. {rows.length} shown.
-        </p>
-      </div>
+    <div className="view-stack">
+      <PageIntro eyebrow="Change register" title="Know what creates exposure." description="Scan tracked MAS publications, isolate material changes, and move directly to the documents that require action." status={`${rows.length} ${rows.length === 1 ? 'change' : 'changes'} shown · ${rows.filter(d => impactLevel(d) === 'high').length} high impact`} />
 
       <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-4 py-3">
         <FilterSelect label="Type" value={docType} options={docTypes} onChange={setDocType} />
@@ -124,7 +120,7 @@ export default function RegulatoryChangesView({ documents }) {
                 <tr
                   key={doc.id || doc.source_url}
                   onClick={() => setOpened(doc)}
-                  className="cursor-pointer border-t border-border hover:bg-panel"
+                  className="change-row border-t border-border hover:bg-panel"
                 >
                   <td className="whitespace-nowrap px-4 py-2.5 align-top mono text-[13px] text-muted">
                     {doc.date || '—'}
@@ -160,6 +156,7 @@ export default function RegulatoryChangesView({ documents }) {
                           : 'text-muted')
                       }
                       title="View affected documents and suggested fixes"
+                      aria-label={`View impact for ${doc.title || 'Untitled'}`}
                     >
                       {affected} {affected === 1 ? 'document' : 'documents'}
                     </button>

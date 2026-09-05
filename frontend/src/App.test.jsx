@@ -26,6 +26,9 @@ test('loads saved documents when the application opens', async () => {
 
   render(<App />)
 
+  expect(screen.getByRole('button', { name: 'Open navigation' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
+
   expect((await screen.findAllByText('Saved MAS circular')).length).toBeGreaterThan(0)
   expect(globalThis.fetch).toHaveBeenCalledWith('/api/v1/documents')
 })

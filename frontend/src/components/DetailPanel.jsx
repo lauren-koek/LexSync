@@ -33,8 +33,8 @@ function Tags({ items }) {
 export default function DetailPanel({ doc }) {
   if (!doc) {
     return (
-      <main className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-border bg-card text-sm text-muted">
-        Select a document to view its summary.
+      <main className="detail-panel detail-panel--empty">
+        Select a document to inspect its summary and source.
       </main>
     )
   }
@@ -44,7 +44,8 @@ export default function DetailPanel({ doc }) {
   const cleanedImpact = doc.llm_impact_check && cleanImpactCheck(doc.llm_impact_check)
 
   return (
-    <main className="flex-1 overflow-y-auto rounded-lg border border-border bg-card px-6 py-5">
+    <main className="detail-panel">
+      <div className="detail-panel__measure">
       <div className="mb-3 flex items-start justify-between gap-3">
         <h1 className="text-lg font-semibold leading-snug">
           {doc.title || 'Untitled'}
@@ -118,6 +119,7 @@ export default function DetailPanel({ doc }) {
             <Tags items={doc.applies_to} />
           </Section>
         )}
+      </div>
       </div>
     </main>
   )

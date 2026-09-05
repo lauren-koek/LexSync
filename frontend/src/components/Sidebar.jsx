@@ -9,9 +9,9 @@ const NAV = [
   { id: 'analysis', label: 'Resilience Analysis', icon: ShieldCheck },
 ]
 
-export default function Sidebar({ view, onNavigate }) {
+export default function Sidebar({ view, onNavigate, open = false }) {
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-panel">
+    <aside className={`sidebar ${open ? 'sidebar--open' : ''}`}>
       <div className="flex items-center gap-2.5 px-5 py-5">
         <img
           src={logo}
@@ -35,10 +35,10 @@ export default function Sidebar({ view, onNavigate }) {
               aria-current={active ? 'page' : undefined}
               onClick={() => onNavigate(id)}
               className={cn(
-                'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                'sidebar__nav-item',
                 active
-                  ? 'bg-ink text-white'
-                  : 'text-ink-soft hover:bg-white/70',
+                  ? 'sidebar__nav-item--active'
+                  : '',
               )}
             >
               <Icon size={16} strokeWidth={active ? 2.2 : 1.8} />

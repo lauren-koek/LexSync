@@ -1,4 +1,5 @@
 import { impactLevel } from '../lib/impact.js'
+import MetricStrip from './ui/MetricStrip.jsx'
 
 function withinDays(dateStr, days) {
   if (!dateStr) return false
@@ -19,21 +20,5 @@ export default function SummaryStrip({ docs, days }) {
     { label: 'High impact', value: highImpact, tone: highImpact > 0 },
   ]
 
-  return (
-    <div className="grid grid-cols-3 divide-x divide-border overflow-hidden rounded-lg border border-border bg-card">
-      {stats.map(s => (
-        <div key={s.label} className="px-5 py-4">
-          <div className="eyebrow mb-1.5">{s.label}</div>
-          <div
-            className={
-              'text-2xl font-semibold tabular-nums ' +
-              (s.tone ? 'text-decision-red' : 'text-ink')
-            }
-          >
-            {s.value}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
+  return <MetricStrip items={stats.map(s => ({ ...s, tone: s.tone ? 'red' : undefined }))} />
 }

@@ -1,12 +1,9 @@
 import Redline from './Redline.jsx'
-
-function Metric({ label, value }) {
-  return <div className="metric"><span className="metric-value">{value}</span><span>{label}</span></div>
-}
+import MetricStrip from './ui/MetricStrip.jsx'
 
 export default function AnalysisResults({ result }) {
   if (result.match_count === 0) {
-    return <div className="analysis-notice">No semantically related internal assets were found for this regulation.</div>
+    return <div className="analysis-notice" role="status"><strong>No semantically related internal assets were found for this regulation.</strong><span> Check the source text or try another internal asset, then run the comparison again.</span></div>
   }
 
   const affected = result.report.filter(entry => entry.analysis.is_affected)
@@ -14,12 +11,17 @@ export default function AnalysisResults({ result }) {
 
   return (
     <section className="analysis-results" aria-label="Analysis results">
-      <div className="metrics">
-        <Metric label="Clauses scanned" value={result.clause_count} />
-        <Metric label="Matches found" value={result.match_count} />
-        <Metric label="Affected" value={affected.length} />
-        <Metric label="Highest impact" value={`${highest}/10`} />
+      <div className="results-decision">
+        <p className="eyebrow">Decision</p>
+        <h2>{affected.length} {affected.length === 1 ? 'clause requires' : 'clauses require'} action</h2>
+        <p>Review the prioritized findings and proposed language before accepting any change.</p>
       </div>
+      <MetricStrip items={[
+        { label: 'Clauses scanned', value: result.clause_count },
+        { label: 'Matches found', value: result.match_count },
+        { label: 'Affected', value: affected.length, tone: affected.length ? 'red' : undefined },
+        { label: 'Highest impact', value: `${highest}/10` },
+      ]} />
       <div className="propagation-note">
         Dry-run propagation prepared for {result.propagation.dispatched} affected clause(s).
       </div>

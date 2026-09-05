@@ -26,6 +26,7 @@ function view(overrides = {}) {
 
 test('renders all documents as timeline rows', () => {
   render(<RegulatoryChangesView documents={view()} />)
+  expect(screen.getByText(/2 changes shown/i)).toBeInTheDocument()
   expect(screen.getByText('AML Circular')).toBeInTheDocument()
   expect(screen.getByText('Capital Guideline')).toBeInTheDocument()
 })
@@ -40,9 +41,9 @@ test('filters rows by document type', () => {
   expect(screen.getByText('Capital Guideline')).toBeInTheDocument()
 })
 
-test('opens the affected-documents page when a row is clicked', () => {
+test('opens the affected-documents page from an explicit impact action', () => {
   render(<RegulatoryChangesView documents={view()} />)
-  fireEvent.click(screen.getByText('AML Circular'))
+  fireEvent.click(screen.getAllByRole('button', { name: /View impact for AML Circular/i })[0])
   expect(
     screen.getByRole('button', { name: /Back to regulatory changes/i }),
   ).toBeInTheDocument()

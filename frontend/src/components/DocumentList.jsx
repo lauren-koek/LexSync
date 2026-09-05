@@ -2,7 +2,7 @@ import DocumentCard from './DocumentCard.jsx'
 
 function Shell({ children }) {
   return (
-    <aside className="flex w-full max-w-sm shrink-0 flex-col gap-2 overflow-y-auto pr-1">
+    <aside className="document-list" aria-label="Regulatory documents">
       {children}
     </aside>
   )
