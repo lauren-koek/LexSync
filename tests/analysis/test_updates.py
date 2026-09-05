@@ -4,7 +4,33 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from backend.analysis.updates import _within_window, fetch_updates
+from backend.analysis.updates import _run_scraper, _within_window, fetch_updates
+from backend.scraper.src.mas_regulations_scraper import USER_AGENT
+
+
+def test_run_scraper_uses_the_cli_browser_identity(tmp_path):
+    playwright = MagicMock()
+    browser = playwright.chromium.launch.return_value
+    context = MagicMock()
+    context.__enter__.return_value = playwright
+    context.__exit__.return_value = False
+
+    with (
+        patch("playwright.sync_api.sync_playwright", return_value=context),
+        patch(
+            "backend.scraper.src.mas_regulations_scraper.fetch_listing_html",
+            return_value="listing",
+        ),
+        patch("backend.scraper.src.mas_regulations_scraper.parse_listing", return_value=[]),
+        patch("backend.scraper.src.mas_regulations_scraper.enrich_with_details"),
+        patch("backend.scraper.src.mas_regulations_scraper.save_records"),
+    ):
+        _run_scraper(1, tmp_path / "mas.json")
+
+    browser.new_page.assert_called_once_with(
+        user_agent=USER_AGENT,
+        ignore_https_errors=True,
+    )
 
 
 def test_within_window_includes_doc_on_cutoff_day():
@@ -57,6 +83,12 @@ def mas_json(tmp_path):
     return p
 
 
+@pytest.fixture
+def disable_scraper():
+    with patch("backend.analysis.updates._run_scraper"):
+        yield
+
+
 def _make_mock_session(existing):
     mock_session = MagicMock()
     mock_session.query.return_value.filter_by.return_value.first.return_value = existing
@@ -83,7 +115,7 @@ def _make_existing_doc():
     return doc
 
 
-def test_fetch_updates_excludes_old_docs(mas_json):
+def test_fetch_updates_excludes_old_docs(mas_json, disable_scraper):
     mock_ctx = _make_mock_session(_make_existing_doc())
     with patch("backend.analysis.updates.get_session", return_value=mock_ctx):
         results = fetch_updates(7, json_path=mas_json)
@@ -91,7 +123,7 @@ def test_fetch_updates_excludes_old_docs(mas_json):
     assert results[0]["title"] == "Doc 1"
 
 
-def test_fetch_updates_uses_cache_when_llm_summary_exists(mas_json):
+def test_fetch_updates_uses_cache_when_llm_summary_exists(mas_json, disable_scraper):
     mock_ctx = _make_mock_session(_make_existing_doc())
     with patch("backend.analysis.updates.get_session", return_value=mock_ctx), \
          patch("backend.analysis.updates.download_and_ocr") as mock_ocr:
@@ -99,8 +131,7 @@ def test_fetch_updates_uses_cache_when_llm_summary_exists(mas_json):
     mock_ocr.assert_not_called()
 
 
-def test_fetch_updates_processes_uncached_doc(mas_json):
-    mock_ctx = _make_mock_session(None)
+def test_fetch_updates_processes_uncached_doc(mas_json, disable_scraper):
     processed = MagicMock()
     processed.llm_summary = "new summary"
     processed.llm_categories = ["AML"]
@@ -127,6 +158,6 @@ def test_fetch_updates_processes_uncached_doc(mas_json):
     assert results[0]["llm_summary"] == "new summary"
 
 
-def test_fetch_updates_returns_empty_when_json_missing(tmp_path):
+def test_fetch_updates_returns_empty_when_json_missing(tmp_path, disable_scraper):
     results = fetch_updates(7, json_path=tmp_path / "nonexistent.json")
     assert results == []

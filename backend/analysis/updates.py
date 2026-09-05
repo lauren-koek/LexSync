@@ -23,6 +23,7 @@ def _run_scraper(days: int, output_path: Path) -> None:
     from playwright.sync_api import sync_playwright
 
     from backend.scraper.src.mas_regulations_scraper import (
+        USER_AGENT,
         enrich_with_details,
         fetch_listing_html,
         filter_last_n_days,
@@ -33,7 +34,10 @@ def _run_scraper(days: int, output_path: Path) -> None:
     logger.info("Running MAS scraper for last %d day(s)…", days)
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page(ignore_https_errors=True)
+        page = browser.new_page(
+            user_agent=USER_AGENT,
+            ignore_https_errors=True,
+        )
         listing_html = fetch_listing_html(page)
         records = parse_listing(listing_html)
         logger.info("Scraper found %d documents in listing", len(records))
