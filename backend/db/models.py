@@ -3,7 +3,16 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, UniqueConstraint, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON, Date, String, Text
 
@@ -49,7 +58,7 @@ class Document(Base):
     updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), onupdate=func.now()
     )
-    suggestions: Mapped[list["DocumentSuggestion"]] = relationship(
+    suggestions: Mapped[list[DocumentSuggestion]] = relationship(
         back_populates="regulatory_document", cascade="all, delete-orphan"
     )
 
@@ -72,10 +81,10 @@ class InternalDocument(Base):
         DateTime(timezone=True), onupdate=func.now()
     )
 
-    chunks: Mapped[list["InternalDocumentChunk"]] = relationship(
+    chunks: Mapped[list[InternalDocumentChunk]] = relationship(
         back_populates="document", cascade="all, delete-orphan"
     )
-    suggestions: Mapped[list["DocumentSuggestion"]] = relationship(
+    suggestions: Mapped[list[DocumentSuggestion]] = relationship(
         back_populates="internal_document", cascade="all, delete-orphan"
     )
 
@@ -116,7 +125,7 @@ class InternalDocumentChunk(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     document: Mapped[InternalDocument] = relationship(back_populates="chunks")
-    suggestions: Mapped[list["DocumentSuggestion"]] = relationship(
+    suggestions: Mapped[list[DocumentSuggestion]] = relationship(
         back_populates="internal_chunk", cascade="all, delete-orphan"
     )
 

@@ -1,4 +1,8 @@
-from backend.db.models import DocumentSuggestion, InternalDocument, InternalDocumentChunk
+from backend.db.models import (
+    DocumentSuggestion,
+    InternalDocument,
+    InternalDocumentChunk,
+)
 
 
 def test_internal_chunk_belongs_to_parent_document():

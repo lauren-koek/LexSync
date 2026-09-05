@@ -10,6 +10,7 @@ FastAPI analysis API and retains the scheduled MAS-to-PostgreSQL pipeline.
 | `backend/main.py` | FastAPI application entry point |
 | `backend/api/` | HTTP routes and Pydantic schemas |
 | `backend/analysis/` | Request-local and CLI legal resilience workflow |
+| `backend/storage/` | Private AWS-compatible storage for uploaded internal PDFs |
 | `backend/scraper/src/pdf_ocr.py` | PDF text extraction (pdfplumber + Tesseract fallback) |
 | `backend/db/` | SQLAlchemy 2.x models and session factory |
 | `backend/llm/processor.py` | Per-document LLM summarise/categorise via OpenRouter |
@@ -44,6 +45,9 @@ test suite with `make test`.
 - `GET /api/v1/health` reports service health.
 - `POST /api/v1/analysis` accepts regulation and internal-asset text and
   returns the analysis report without writing shared demo artifacts.
+- `POST /api/v1/internal-documents` uploads and synchronously indexes a PDF.
+- `GET /api/v1/internal-documents` lists the shared internal-document library.
+- `POST /api/v1/internal-documents/search` performs semantic vector search.
 
 The future frontend should call
 `http://localhost:8000/api/v1/analysis`. Configure allowed browser origins
@@ -64,12 +68,22 @@ python -m backend.pipeline
 See `backend/docs/pipeline.md` for stage-by-stage usage and
 `backend/docs/database.md` for schema and DB management.
 
-## Analysis status
+## Internal document storage
 
-The API contract and document-ingestion pipeline are in place. Semantic
-matching is intentionally disabled until the PostgreSQL/pgvector-backed
-internal-document index is implemented. For now, analysis requests return no
-matches rather than initializing a local embedding model or vector database.
+Original PDFs are private objects in an S3-compatible bucket. Configure the
+API service with `AWS_ENDPOINT_URL`, `S3_BUCKET_NAME`, `AWS_DEFAULT_REGION`,
+`AWS_ACCESS_KEY_ID`, and `AWS_SECRET_ACCESS_KEY`. Railway Bucket credentials
+can be referenced directly into these variables. PDF access uses 15-minute
+presigned URLs; no bucket object is public.
+
+Uploads are limited to 10 MB and must contain extractable text. Image-only and
+encrypted PDFs are rejected. Successful uploads are split into legal clauses,
+embedded, and stored in PostgreSQL/pgvector before the request returns.
+
+After a regulatory document is saved with OCR text, the MAS pipeline searches
+the persistent internal index and saves suggested changes. Failed suggestion
+generation is logged without rolling back regulatory ingestion and can be
+retried from the UI.
 
 ## Setup
 
@@ -105,9 +119,8 @@ Then open http://localhost:8501.
 
 ## Extending beyond the hackathon
 
-- Add the internal-document table and pgvector index through SQLAlchemy.
-- Generate and store embeddings only for internal-team documents.
-- Compare newly ingested regulatory material against that durable index.
+- Add authentication and workspace ownership to the currently shared library.
+- Move synchronous processing to a queue when upload volume requires it.
 - `dispatch_updates(dry_run=True)` in `notify.py` is a documented extension
   point for real SMTP delivery — do not hardcode credentials, read them from
   environment variables.

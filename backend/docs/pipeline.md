@@ -17,13 +17,18 @@ mas_regulations_scraper.py
         | summary, categories, impact_check
         v
    db/  (upsert into documents table)
+        |
+        | pgvector search over internal_document_chunks
+        v
+ suggestion analysis  (persist into document_suggestions)
 ```
 
 `backend/pipeline.py` drives all three stages sequentially per document. Each stage is skippable via CLI flags.
 
-Semantic comparison is a later database-backed stage. Internal-team documents
-will be embedded into PostgreSQL using pgvector; ingested regulatory PDFs and
-their LLM recommendations remain ordinary relational data.
+Semantic comparison runs after a regulatory row with OCR text commits. It uses
+the durable internal-document pgvector index and persists affected matches as
+reviewable suggestions. Analysis errors are logged separately and never roll
+back the regulatory row.
 
 ## Environment variables
 
@@ -32,6 +37,11 @@ their LLM recommendations remain ordinary relational data.
 | `DATABASE_URL` | Yes | PostgreSQL connection string, e.g. `postgresql://lexsync:lexsync@localhost:5432/lexsync` |
 | `OPENROUTER_API_KEY` | Yes (unless `--skip-llm`) | API key for OpenRouter |
 | `OPENROUTER_MODEL` | No | Model ID to use. Defaults to whatever `llm/client.py` sets if unset |
+| `AWS_ENDPOINT_URL` | Yes for uploads | S3-compatible API endpoint |
+| `S3_BUCKET_NAME` | Yes for uploads | Private bucket name used by the S3 API |
+| `AWS_DEFAULT_REGION` | Yes for uploads | Bucket region, commonly `auto` on Railway |
+| `AWS_ACCESS_KEY_ID` | Yes for uploads | Bucket access-key ID |
+| `AWS_SECRET_ACCESS_KEY` | Yes for uploads | Bucket secret access key |
 
 Put these in `.env` at the repo root — `python-dotenv` loads it automatically.
 

@@ -1,36 +1,45 @@
 from uuid import UUID
 
-from fastapi import APIRouter, FastAPI, File, Form, HTTPException, Query, Response, UploadFile
+from fastapi import (
+    APIRouter,
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+)
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.analysis.service import run_analysis
 from backend.analysis.internal_documents import (
     InternalDocumentValidationError,
     delete_internal_document,
     ingest_pdf,
 )
+from backend.analysis.service import run_analysis
 from backend.analysis.suggestions import (
     analyze_regulatory_document,
     reanalyze_internal_document,
     set_suggestion_status,
 )
-from backend.analysis.uploads import resolve_analysis_text
 from backend.analysis.updates import fetch_updates, list_documents
-from backend.db import DocumentSuggestion, InternalDocument, get_session
-from backend.storage import ObjectStorageError, get_object_storage
-from internal_index import semantic_search
+from backend.analysis.uploads import resolve_analysis_text
 from backend.api.schemas import (
     AnalysisRequest,
     AnalysisResponse,
     DocumentResponse,
     HealthResponse,
-    UpdatesRequest,
     InternalDocumentDetail,
     InternalDocumentSummary,
     SemanticSearchRequest,
     SuggestionResponse,
     SuggestionStatusRequest,
+    UpdatesRequest,
 )
+from backend.db import DocumentSuggestion, InternalDocument, get_session
+from backend.storage import ObjectStorageError, get_object_storage
+from internal_index import semantic_search
 
 router = APIRouter(prefix="/api/v1")
 

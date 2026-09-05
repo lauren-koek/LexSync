@@ -5,7 +5,6 @@ from fastapi.testclient import TestClient
 
 from backend.api import routes
 
-
 client = TestClient(routes.app)
 
 

@@ -5,9 +5,9 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from uuid import UUID
 
+from backend.analysis.suggestions import analyze_regulatory_document
 from backend.db import Document, create_tables, get_session
 from backend.llm.processor import process_document
-from backend.analysis.suggestions import analyze_regulatory_document
 from backend.scraper.src.pdf_ocr import download_and_ocr
 
 logger = logging.getLogger(__name__)

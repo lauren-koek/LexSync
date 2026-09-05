@@ -4,15 +4,19 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
 
 from backend.analysis.ingest import chunk_legal_document
-from backend.analysis.uploads import MAX_UPLOAD_BYTES, PDFExtractionError, extract_pdf_bytes
+from backend.analysis.uploads import (
+    MAX_UPLOAD_BYTES,
+    PDFExtractionError,
+    extract_pdf_bytes,
+)
 from backend.db.models import InternalDocument, InternalDocumentChunk
 from backend.storage.objects import ObjectStorage
 from internal_index import EMBEDDING_DIM, embed_text

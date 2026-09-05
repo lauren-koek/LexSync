@@ -4,7 +4,6 @@ from sqlalchemy import text
 
 from backend.db.session import engine
 
-
 STATEMENTS = (
     """CREATE TABLE IF NOT EXISTS internal_documents (
         id UUID PRIMARY KEY,

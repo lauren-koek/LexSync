@@ -29,18 +29,22 @@ PostgreSQL 16. SQLAlchemy 2.x models in `db/models.py`. Tables are created autom
 
 `source_url` carries a unique constraint — pipeline runs upsert on it.
 
-## Planned pgvector schema
+## Internal-document and pgvector schema
 
-The persistence layer will be split into two responsibilities:
+The persistence layer has three responsibilities:
 
-1. A regulatory-ingestion table for downloaded PDF text, source metadata,
-   and LLM recommendations. The current `documents` model covers this data
-   and will be migrated deliberately when the final table name is chosen.
-2. An internal-document table for documents used by the internal team. This
-   table will own the pgvector embedding column and its vector index.
+1. `documents` stores downloaded regulatory PDF text, source metadata, and LLM output.
+2. `internal_documents` stores one row per shared uploaded PDF, including its
+   private object key, SHA-256 digest, size, status, and chunk count.
+3. `internal_document_chunks` stores citation-aware extracted clauses and
+   `vector(384)` embeddings. An HNSW cosine index supports semantic search.
+4. `document_suggestions` links a regulatory row to an internal clause and
+   persists similarity, legal analysis, redline, citations, and review status.
 
-Regulatory PDFs and LLM recommendations will not receive vector columns.
-FastEmbed, Qdrant, and ONNX Runtime are not part of this architecture.
+Regulatory rows do not receive vector columns. Their OCR text is chunked at
+analysis time and queried against the durable internal index. Deleting an
+internal document cascades to its chunks and suggestions after its private
+bucket object has been deleted.
 
 ## Running locally with Docker
 

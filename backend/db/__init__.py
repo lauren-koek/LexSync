@@ -1,4 +1,9 @@
-from backend.db.models import Document, DocumentSuggestion, InternalDocument, InternalDocumentChunk
+from backend.db.models import (
+    Document,
+    DocumentSuggestion,
+    InternalDocument,
+    InternalDocumentChunk,
+)
 from backend.db.session import SessionLocal, create_tables, get_session
 
 __all__ = [

@@ -1,4 +1,3 @@
-from contextlib import contextmanager
 
 import pytest
 from sqlalchemy import create_engine
