@@ -263,7 +263,9 @@ def save_records(records: list[dict], path: str = OUTPUT_FILE) -> None:
         "count": len(records),
         "documents": records,
     }
-    Path(path).write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 def main():
